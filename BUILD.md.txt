@@ -1,0 +1,422 @@
+# BUILD.md — OrderFlow
+### An AI Agent Marketplace for BNB Smart Chain — "Build the Era" Hackathon Entry
+
+> **Note to the build agent:** this is the single source of truth for this project. Build in the phase order given in Section 14 — don't skip ahead to polish before the core loop (browse → understand → hire) works end to end. Anywhere you see **⚠️ VERIFY**, confirm the detail from the linked official source before writing code against it — do not guess at a contract address, function signature, or SDK method name. "OrderFlow" is a placeholder project name; rename freely across `package.json`, the README, and UI copy if you or the user prefer something else.
+
+---
+
+## 0. Quick Facts
+
+| | |
+|---|---|
+| Hackathon | Build the Era — BNB Chain "Smart Money Era" |
+| Build period | Aug 5 – Sep 9, 2026 (UTC+0) |
+| Submit via | https://forms.gle/9g9XPNFwnYaHAz9L8 |
+| Main prize | $30,000 + official adoption as the BNB Agent Studio marketplace |
+| Tracks entering | Main Track + TermiX Challenge (Altana is an optional stretch — see §16) |
+| Entrant | Solo |
+| Target chain | BNB Smart Chain **Testnet** (chainId `97`) |
+| Official hackathon page | https://www.bnbchain.org/en/hackathons/smart-money-era |
+
+---
+
+## 1. Mission
+
+Build **the marketplace**, not a portfolio of agents: one place to browse AI agents live on BSC, understand what each one does and how well it performs, and hire it. The winning build gets adopted as BNB Chain's official BNB Agent Studio marketplace.
+
+Judges will personally walk through the product. The single most important thing this build does is let a stranger go from landing page to a completed hire with zero prior context and zero dead ends.
+
+---
+
+## 2. Judging Rubric → What We're Building
+
+### Main Track (weighted equally, scored independently by 3 judges)
+
+| Criterion | What it means |
+|---|---|
+| **Functionality** | Land → find an agent by category → understand what it does → activate it, with minimal friction. Someone with zero Agent Studio knowledge must get through it without hitting a dead end. |
+| **Data Quality** | Real-time, accurate data beyond basic counts. A user should be able to look at what's shown and make a genuinely informed hiring decision. |
+| **Agent Diversity** | All four categories — **rebalancing, grid trading, yield, health factor** — surfaced with **equal depth**. Treating one category as the main event and the rest as an afterthought scores poorly. |
+
+**Eligibility (non-negotiable):** submission must be publicly accessible during judging (real deployment, not localhost). Agents surfaced on the marketplace must be live on BSC — no fabricated listings in the judged build.
+
+### TermiX Challenge (scored independently, on top of main track)
+
+| Criterion | Weight | What "great" looks like |
+|---|---|---|
+| Value of the services | 30% | Real working agents, priced and fast enough to beat the alternative. TermiX hires from the marketplace themselves. |
+| Proven agent advantage | 30% | Measured in the required **Agent Advantage Report**, not asserted. |
+| High-stakes categories & track record | 20% | Trading/stock/security agents weighted above general-purpose; trading agents need a real record — win rate, the window it covers, the risk taken. |
+| Marketplace quality | 20% | Find, compare, hire — without instructions. |
+
+Everything in this document exists to serve one of the rows above. If a section ever conflicts with this table, the table wins.
+
+---
+
+## 3. Core Strategy (read this before estimating scope)
+
+Solo, ~2 weeks. Hand-building four fully custom trading bots from scratch is not the efficient path to "Agent Diversity" — **don't do that.**
+
+More than 200,000 agents are already registered on BSC under ERC-8004. The marketplace's job is to **index and surface real ones** across all four categories, not to be the sole source of its own listings. Concretely:
+
+1. **Index third-party agents already on BSC** by reading the ERC-8004 Identity + Reputation registries and classifying by category from each agent's registration file / advertised skills. This is what gives "Agent Diversity" and "Data Quality" real breadth without solo-building dozens of bots.
+2. **Build one flagship agent ourselves** — an **ICT/Smart-Money-informed Grid Trading agent** (see §9) — deep enough to carry the TermiX "high-stakes category & track record" criterion and anchor the Agent Advantage Report.
+3. **Scaffold three more of our own agents** (rebalancing, yield, health factor) via the BNB Agent Studio CLI, which auto-provisions wallet + ERC-8004 identity + deployment. These need genuinely working (if simpler) logic and real testnet activity — not stubs — but don't need the same bespoke depth as the flagship.
+
+This combination is what makes "equal depth across all four categories" achievable solo in two weeks.
+
+---
+
+## 4. Tech Stack (locked — don't re-litigate mid-build)
+
+| Layer | Choice |
+|---|---|
+| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind CSS |
+| Chain interaction | `viem` + `wagmi` v2 + RainbowKit (wallet connect) |
+| Contracts (ours, minimal) | Solidity ^0.8.24, Hardhat + TypeScript, OpenZeppelin |
+| Database | PostgreSQL (Neon or Supabase free tier) + Prisma ORM |
+| Backend | Next.js Route Handlers (`app/api/**`) — no separate service |
+| Scheduled sync | Vercel Cron → API route, every 15 min |
+| Agent scaffolding | BNB Agent Studio CLI (`@bnbagent/studio-cli`) for our 3 non-flagship agents |
+| Deployment | Vercel (frontend + API + cron) |
+| Package manager | pnpm |
+
+**Setup tip for this build agent:** BNB Chain publishes an MCP server (`npx @bnb-chain/mcp@latest`) covering blocks, transactions, contracts, tokens, and ERC-8004 agent reads/writes. If this coding environment supports adding an MCP server, add it in Phase 0 — it gives you live tool access to verify chain calls while building instead of guessing. Separately, BNB Agent Studio's CLI auto-registers its own MCP server with Cursor/Claude Code; Antigravity isn't a listed IDE for that yet, so check whether it accepts a custom MCP server config — if not, the `bnb` CLI still works fine run directly from a terminal, the auto-detect is just a convenience layer.
+
+---
+
+## 5. The Three-Standard Stack (read before writing any chain code)
+
+Three separate, composable standards power this whole category. Don't conflate them.
+
+| Standard | Answers | Role here |
+|---|---|---|
+| **ERC-8004** | *Who is this agent, and can I trust it?* | Identity (ERC-721), reputation, validation. We read this for every listing. |
+| **ERC-8183** | *How do I actually hire it?* | "Job" primitive: Client posts + escrows funds → Provider does the work → Evaluator attests completion or rejection → funds release or refund. States: `Open → Funded → Submitted → Terminal`. |
+| **x402 (Binance facilitator)** | *How does the money move?* | HTTP-native payment rail. Server responds `402` with payment terms → client signs an off-chain authorization (EIP-3009 or Permit2) → retries with proof → facilitator verifies + settles on-chain, non-custodially. |
+
+The "Hire" button on an agent page does all three in sequence: look up identity/reputation (8004) → create and fund a job (8183, funded via x402) → poll job state until Terminal.
+
+### 5.1 ERC-8004 — confirmed BSC Testnet addresses
+
+```
+IdentityRegistry:   0x8004A818BFB912233c491871b3d84c89A494BD9e
+ReputationRegistry: 0x8004B663056A597Dffe9eCcC1965A193B7388713
+```
+(BSC Mainnet uses different addresses — `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` / `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` — not needed for this build, testnet is the target.)
+
+**Pull the canonical ABI from `github.com/erc-8004/erc-8004-contracts` (`/abis` folder) — do not hand-type it.** Functions we call, for reference:
+
+- Identity: `register(...)`, `setAgentURI(agentId, uri)`, `getMetadata(agentId, key)`, `setMetadata(agentId, key, value)`, `getAgentWallet(agentId)`, `tokenURI(agentId)`
+- Reputation: `getSummary(agentId, clientAddresses, tag1, tag2) → (count, summaryValue, summaryValueDecimals)`, `readAllFeedback(agentId, clientAddresses, tag1, tag2, includeRevoked)`, `giveFeedback(...)`
+- Agent identifier format: `{namespace}:{chainId}:{identityRegistry}` + `agentId` → e.g. `eip155:97:0x8004A818BFB912233c491871b3d84c89A494BD9e:agentId`
+- `agentURI` resolves to a registration JSON: `{ type, name, description, image, services: [...endpoints], registrations: [{agentRegistry, agentId}], supportedTrust }`. The `services` array is what we parse to classify category and find each agent's callable endpoint.
+- We tag our own 4 agents' category on-chain via `setMetadata(agentId, "category", "<REBALANCING|GRID_TRADING|YIELD|HEALTH_FACTOR>")` — cheap, and it's real on-chain data quality, not just a database label.
+
+### 5.2 ERC-8183 — job lifecycle
+
+Roles: **Client** (the hirer — our marketplace user), **Provider** (the agent), **Evaluator** (attests completion; can be an agent, a multisig, or in our simplest version, the marketplace's own attestation service for jobs we control).
+
+States: `Open` (created) → `Funded` (client escrows payment) → `Submitted` (provider delivers) → `Terminal` = `Completed` (evaluator approves, funds release to provider) or `Rejected`/`Expired` (refund to client).
+
+**⚠️ VERIFY before wiring the hire flow:** the deployed job-contract address on BSC Testnet, and whether to call it directly or through BNB Agent Studio's own SDK/API layer. Check:
+- `github.com/bnb-chain/bnbagent-sdk` (Python; has an `erc8183` module and a documented `GET /erc8183/status` — suggests Studio may expose a hosted API on top of the raw contract, which would be far less work than reimplementing escrow calls by hand)
+- `eips.ethereum.org/EIPS/eip-8183` (the spec itself — still in Draft status, so treat exact function signatures as subject to change and isolate all calls behind one `lib/jobs/erc8183.ts` module so a spec update only touches one file)
+
+### 5.3 x402 — payment flow
+
+```
+1. Client requests to fund a job
+2. Server responds 402 with payment requirements (amount, asset, recipient)
+3. Client wallet signs an off-chain authorization (EIP-3009 transferWithAuthorization, or Permit2)
+4. Client retries the request with the signed payload attached
+5. Binance's x402 facilitator verifies the signature, submits on-chain, confirms
+6. Server receives settlement confirmation, job moves to Funded
+```
+Supported BSC stablecoins: USDT, USDC, U, USD1. Facilitator is non-custodial — it verifies and settles, never holds funds.
+
+**⚠️ VERIFY before going live:** Binance's specific facilitator endpoint / merchant onboarding steps — check `docs.bnbchain.org` for the current x402 integration guide. Build the payment call behind `lib/payments/x402.ts` with a clean interface (`createPaymentRequest()`, `submitPayment()`, `getSettlementStatus()`) so swapping in the real endpoint is a config change, not a rewrite.
+
+---
+
+## 6. Data Model (Prisma)
+
+```prisma
+enum AgentCategory {
+  REBALANCING
+  GRID_TRADING
+  YIELD
+  HEALTH_FACTOR
+}
+
+enum JobStatus {
+  OPEN
+  FUNDED
+  SUBMITTED
+  COMPLETED
+  REJECTED
+  EXPIRED
+}
+
+model Agent {
+  id                String    @id @default(cuid())
+  agentIdOnchain    String    // ERC-721 tokenId from Identity Registry
+  chainId           Int       @default(97)
+  identityRegistry  String
+  ownerAddress      String
+  agentWallet       String?
+  name              String
+  description       String
+  category          AgentCategory
+  imageUrl          String?
+  agentUriRaw       String
+  services          Json?     // parsed endpoints from the registration file
+  isOwnBuild        Boolean   @default(false) // true only for our 4 built agents
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  reputationSnapshots ReputationSnapshot[]
+  jobs                Job[]
+}
+
+model ReputationSnapshot {
+  id                   String   @id @default(cuid())
+  agentId              String
+  agent                Agent    @relation(fields: [agentId], references: [id])
+  feedbackCount        Int
+  summaryValue         String   // string, not float — avoid precision loss
+  summaryValueDecimals Int
+  syncedAt             DateTime @default(now())
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  jobIdOnchain    String?
+  agentId         String
+  agent           Agent     @relation(fields: [agentId], references: [id])
+  clientAddress   String
+  status          JobStatus @default(OPEN)
+  taskDescription String
+  budgetAmount    String
+  budgetAsset     String    // USDT | USDC | U | USD1
+  txHashFund      String?
+  txHashSettle    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AdvantageReportTask {
+  id                String   @id @default(cuid())
+  title             String
+  category          String   // "trading" | "stock" | "security" | other
+  manualTimeMinutes Int
+  manualCostUsd     Float
+  manualOutputNotes String
+  manualOutputUrl   String?
+  agentTimeMinutes  Int
+  agentCostUsd      Float
+  agentOutputNotes  String
+  agentOutputUrl    String?
+  verdict           String
+  createdAt         DateTime @default(now())
+}
+```
+
+---
+
+## 7. Backend
+
+### API routes
+| Route | Purpose |
+|---|---|
+| `GET /api/agents` | List + filter by category, sort by reputation/recency |
+| `GET /api/agents/[id]` | Detail: description, endpoints, reputation history |
+| `GET /api/agents/[id]/reputation` | Live pull-through of `getSummary` if cache is stale |
+| `POST /api/hire` | Kicks off ERC-8183 job creation for an agent |
+| `POST /api/hire/[jobId]/fund` | Triggers the x402 payment flow, moves job to Funded |
+| `GET /api/jobs?client=0x..` | "My jobs" for the dashboard |
+| `GET /api/advantage-report` | Serves the TermiX report data |
+| `POST /api/cron/sync-registry` | Cron target — see below |
+
+### Registry sync job (every 15 min, Vercel Cron)
+Pull `Transfer` events (new registrations) and reputation changes from the two ERC-8004 registries on BSC testnet since last sync, upsert into `Agent` / `ReputationSnapshot`. This is what makes "Data Quality" real — cached for fast page loads, refreshed often enough to count as real-time.
+
+---
+
+## 8. Frontend Pages
+
+| Route | Purpose | Key data |
+|---|---|---|
+| `/` | Landing: hero, live activity ticker (see §11 signature element), category breakdown | Recent jobs, agent counts per category |
+| `/agents` | Browse/filter by the 4 categories, sort by reputation/price/recency | `Agent[]` + `ReputationSnapshot` |
+| `/agents/[id]` | Detail: description, live reputation, endpoints, performance history, **Hire** CTA | Full agent + snapshots + job history |
+| `/hire/[agentId]` | Hire flow: connect wallet → review job terms → x402 payment → live job-status tracker (`Open→Funded→Submitted→Terminal`) | Job creation + polling |
+| `/dashboard` | "My jobs" — a connected wallet's hire history and live status | `Job[]` filtered by `clientAddress` |
+| `/advantage-report` | Public TermiX Agent Advantage Report — required, judged, must be easy to find | `AdvantageReportTask[]` |
+
+Functionality judging is explicitly "land → find → understand → activate with minimal friction" — keep the browse-to-hire path to as few clicks as the wallet-connect + payment-signature minimum requires. No login walls, no unnecessary intermediate screens.
+
+---
+
+## 9. The Four Agents
+
+| Category | What the hackathon expects | Our approach | Depth |
+|---|---|---|---|
+| **Grid Trading** (flagship) | Automated strategy within set ranges | ICT/Smart-Money-informed grid: place grid boundaries at liquidity zones / order blocks / fair value gaps instead of naive fixed-% ranges. This is where prior ICT bootcamp knowledge becomes real product differentiation. | Deep, bespoke — this is also the TermiX "trading" flagship |
+| **Health Factor** | Track loan positions, act before liquidation | Monitor a Venus Protocol position (BSC's primary lending market), alert/act as health factor approaches threshold | Real, working, simpler strategy |
+| **Yield** | Move capital to where it earns most | Compare yields across a small basket of BSC opportunities (Venus supply APY, PancakeSwap LP pools), move on a threshold | Real, working, simpler strategy |
+| **Rebalancing** | Maintain a target portfolio allocation | Rebalance a small fixed basket of BSC assets back to target weights on a schedule/threshold | Real, working, simpler strategy |
+
+All four must: be registered via ERC-8004 (real `agentId`, real registration file), execute genuine (even if simple) strategy logic against BSC testnet — not mocked outputs — and get equal presentation quality in the UI (same level of stats, same detail-page layout). Depth of *strategy sophistication* concentrates in Grid Trading; depth of *presentation and data quality* must not.
+
+**Build path:** provision all 4 through the BNB Agent Studio CLI (`npm install -g @bnbagent/studio-cli`, then describe each agent in a prompt) — it auto-generates wallet, ERC-8004 registration, and cloud deployment, which is the fast path to "genuinely live on BSC" for all four. Then hand-deepen the Grid Trading agent's actual decision logic beyond Studio's scaffold.
+
+---
+
+## 10. Agent Advantage Report (TermiX — required, do not skip)
+
+Exact requirement: **at least 3 real tasks, each run two ways** (manually vs. hired through OrderFlow), reporting **time, cost, and output quality** with actual outputs attached, and **at least one task from trading, stock, or security**.
+
+| # | Task | Category | Manual (time/cost/quality) | Agent (time/cost/quality) | Verdict |
+|---|---|---|---|---|---|
+| 1 | e.g. "Find a safe BSC entry for a $500 long using ICT structure" | trading | — | — | — |
+| 2 | e.g. "Check if a lending position is at liquidation risk" | security/DeFi-risk | — | — | — |
+| 3 | e.g. "Find the best current stablecoin yield on BSC" | general | — | — | — |
+
+Fill this in with real runs against the real Grid Trading / Health Factor / Yield agents once they're live — don't fabricate numbers. This report drives 30% of the TermiX score directly, so schedule it in Phase 4, not as a submission-night afterthought.
+
+---
+
+## 11. Design Direction
+
+Subject: a trading-terminal-grade agent marketplace — the product should *feel* like the "smart money" concept it's selling: signal over noise, information advantage, live order flow. Avoid the generic AI-build defaults (cream background + serif + terracotta; near-black + neon accent; broadsheet columns) — go for a **quiet, dark ledger**, not a crypto-neon dashboard.
+
+**Palette**
+- `#0E1116` Ink — base background (blue-black, not pure black)
+- `#161B22` Fog — panel/card surface
+- `#E9E6DD` Bone — primary text, warm off-white
+- `#F5A623` Signal — the one accent; reserved for "live," CTAs, active states
+- Muted green/red pair strictly for numeric performance deltas (functional, not decorative)
+
+**Type**
+- Display + UI labels: **Space Grotesk**
+- All numbers, tickers, addresses, stats: **IBM Plex Mono** (tabular figures — this is what makes it read as a ledger, not a SaaS page)
+
+**Layout & signature element**
+Agent listings behave like order-book rows, not SaaS pricing cards: category as a left-aligned eyebrow label, reputation/performance numbers right-aligned in mono. The signature element is a thin, live-updating activity **tape** beneath the hero — real recent on-chain hires and job completions pulled from the sync cache. It's both the visual signature and a running proof of live data.
+
+---
+
+## 12. Folder Structure
+
+```
+orderflow/
+├── app/
+│   ├── page.tsx                    # landing
+│   ├── agents/
+│   │   ├── page.tsx                 # browse
+│   │   └── [id]/page.tsx            # detail
+│   ├── hire/[agentId]/page.tsx
+│   ├── dashboard/page.tsx
+│   ├── advantage-report/page.tsx
+│   └── api/
+│       ├── agents/route.ts
+│       ├── agents/[id]/route.ts
+│       ├── hire/route.ts
+│       ├── jobs/route.ts
+│       ├── advantage-report/route.ts
+│       └── cron/sync-registry/route.ts
+├── lib/
+│   ├── chain/
+│   │   ├── erc8004.ts               # identity + reputation reads/writes
+│   │   └── viemClient.ts
+│   ├── jobs/
+│   │   └── erc8183.ts               # isolate job-contract calls here
+│   ├── payments/
+│   │   └── x402.ts                  # isolate facilitator calls here
+│   └── db/
+│       └── prisma.ts
+├── prisma/
+│   └── schema.prisma
+├── agents/                          # our 4 agents' own logic, deployed via Studio CLI
+│   ├── grid-trading/
+│   ├── health-factor/
+│   ├── yield/
+│   └── rebalancing/
+├── contracts/                       # only if we add the optional curation contract
+├── .env.example
+└── README.md
+```
+
+---
+
+## 13. Environment Variables
+
+```bash
+# Chain
+NEXT_PUBLIC_CHAIN_ID=97
+NEXT_PUBLIC_RPC_URL=                       # public BSC testnet RPC or a dedicated provider
+NEXT_PUBLIC_IDENTITY_REGISTRY=0x8004A818BFB912233c491871b3d84c89A494BD9e
+NEXT_PUBLIC_REPUTATION_REGISTRY=0x8004B663056A597Dffe9eCcC1965A193B7388713
+NEXT_PUBLIC_ERC8183_JOB_CONTRACT=          # ⚠️ VERIFY — see §5.2
+
+# Wallet
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+
+# Database
+DATABASE_URL=                              # Neon or Supabase
+
+# Payments
+X402_FACILITATOR_URL=                      # ⚠️ VERIFY — see §5.3
+X402_MERCHANT_ID=                          # ⚠️ VERIFY
+
+# BNB Agent Studio (for our own 4 agents)
+BNB_AGENT_STUDIO_API_KEY=
+
+# Cron auth
+VERCEL_CRON_SECRET=
+```
+
+---
+
+## 14. Build Phases (solo, ~2 weeks)
+
+- **Phase 0 (Day 1) — Foundation:** repo scaffold, Prisma + Postgres, wallet connect, deploy skeleton to Vercel so "publicly accessible" is true from day one.
+- **Phase 1 (Days 2–4) — Marketplace core:** ERC-8004 registry sync job, agent listing + detail pages against real indexed BSC agents (this alone gets category coverage before our own agents exist).
+- **Phase 2 (Days 5–7) — Hire flow:** ERC-8183 job creation + x402 funding, job-status tracker, dashboard.
+- **Phase 3 (Days 8–10) — Our four agents:** Grid Trading (bespoke ICT logic) + Health Factor / Yield / Rebalancing (via Agent Studio CLI), all registered and genuinely live on testnet.
+- **Phase 4 (Days 11–12) — Agent Advantage Report:** run the 3 real tasks against the live agents, document with real numbers and attached outputs.
+- **Phase 5 (Days 13–14) — Polish & submit:** apply §11 design direction, bug bash the full browse→hire loop, verify public accessibility with a fresh incognito session, submit via the form in §0.
+
+---
+
+## 15. Definition of Done
+
+- [ ] Public URL works with zero setup for a judge, in an incognito window
+- [ ] All 4 categories present with real listings and real data (not placeholders)
+- [ ] Hire flow completes end to end on testnet, all 4 job states visible somewhere in the UI
+- [ ] Agent Advantage Report page live, ≥3 tasks, ≥1 from trading/stock/security, real numbers
+- [ ] README explains how a judge tests it in under 2 minutes
+- [ ] Submission form filled: https://forms.gle/9g9XPNFwnYaHAz9L8
+
+---
+
+## 16. Explicitly Out of Scope
+
+- Mainnet deployment (testnet is the default target for this build)
+- Full Altana ERC-8183 SDK / session-key bonus track (genuinely additive per the hackathon rules — worth revisiting only after §15 is fully checked off)
+- Native mobile app
+- Anything requiring a new chain, token launch, or governance system
+
+---
+
+## 17. Sources
+
+- Hackathon rules & rubric: https://www.bnbchain.org/en/hackathons/smart-money-era
+- Hackathon announcement: https://www.bnbchain.org/en/blog/build-the-era-build-the-official-bnb-agent-studio-marketplace
+- ERC-8004 contracts + addresses: https://github.com/erc-8004/erc-8004-contracts
+- ERC-8183 spec (Draft): https://eips.ethereum.org/EIPS/eip-8183
+- BNB Agent Studio: https://www.bnbchain.org/en/bnb-agent-studio
+- BNB Agent Studio SDK reference: https://github.com/bnb-chain/bnbagent-sdk
+- BNB Chain MCP server: https://github.com/bnb-chain/bnbchain-skills
+- Docs (for x402 + Studio verification steps): https://docs.bnbchain.org

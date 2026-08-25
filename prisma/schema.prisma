@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgentCategory {
+  REBALANCING
+  GRID_TRADING
+  YIELD
+  HEALTH_FACTOR
+}
+
+enum JobStatus {
+  OPEN
+  FUNDED
+  SUBMITTED
+  COMPLETED
+  REJECTED
+  EXPIRED
+}
+
+model Agent {
+  id               String        @id @default(cuid())
+  agentIdOnchain   String        // ERC-721 tokenId from Identity Registry
+  chainId          Int           @default(97)
+  identityRegistry String
+  ownerAddress     String
+  agentWallet      String?
+  name             String
+  description      String
+  category         AgentCategory
+  imageUrl         String?
+  agentUriRaw      String
+  services         Json?         // parsed endpoints from the registration file
+  isOwnBuild       Boolean       @default(false) // true for our 4 built agents
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  reputationSnapshots ReputationSnapshot[]
+  jobs                Job[]
+}
+
+model ReputationSnapshot {
+  id                   String   @id @default(cuid())
+  agentId              String
+  agent                Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  feedbackCount        Int
+  summaryValue         String   // string to avoid precision loss
+  summaryValueDecimals Int
+  syncedAt             DateTime @default(now())
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  jobIdOnchain    String?
+  agentId         String
+  agent           Agent     @relation(fields: [agentId], references: [id])
+  clientAddress   String
+  status          JobStatus @default(OPEN)
+  taskDescription String
+  budgetAmount    String
+  budgetAsset     String    // USDT | USDC | U | USD1
+  txHashFund      String?
+  txHashSettle    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model AdvantageReportTask {
+  id                String   @id @default(cuid())
+  title             String
+  category          String   // "trading" | "stock" | "security" | "deFi"
+  manualTimeMinutes Int
+  manualCostUsd     Float
+  manualOutputNotes String
+  manualOutputUrl   String?
+  agentTimeMinutes  Int
+  agentCostUsd      Float
+  agentOutputNotes  String
+  agentOutputUrl    String?
+  verdict           String
+  createdAt         DateTime @default(now())
+}
