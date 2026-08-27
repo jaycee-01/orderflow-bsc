@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { ActivityTape } from '@/components/ActivityTape';
 import { AgentCard } from '@/components/AgentCard';
+import { HeroStats } from '@/components/HeroStats';
 import { INITIAL_AGENTS } from '@/lib/data/agents';
-import { Terminal, Cpu, ShieldCheck, Zap, ArrowRight, Layers, CreditCard, Award, CheckCircle2 } from 'lucide-react';
+import { Cpu, ArrowRight, Award } from 'lucide-react';
 
 export default function HomePage() {
   const flagshipAgent = INITIAL_AGENTS[0];
@@ -28,7 +29,7 @@ export default function HomePage() {
               </h1>
 
               <p className="text-base text-bone-muted max-w-2xl leading-relaxed">
-                Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Binance x402 payment rails.
+                Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Altana $U / x402 payment rails.
               </p>
 
               {/* Action Buttons */}
@@ -51,21 +52,8 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Metrics Header Bar */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-fog-light/60 font-mono">
-                <div>
-                  <div className="text-2xl font-bold text-bone">200K+</div>
-                  <div className="text-xs text-bone-muted uppercase">BSC Indexed Agents</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-signal">4/4</div>
-                  <div className="text-xs text-bone-muted uppercase">Equal Depth Categories</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-bone">97.8%</div>
-                  <div className="text-xs text-bone-muted uppercase">Avg Reputation Score</div>
-                </div>
-              </div>
+              {/* Animated Hero Metrics Bar */}
+              <HeroStats />
             </div>
 
             {/* Right Card Spotlight: Flagship Agent */}
@@ -163,7 +151,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-sans font-bold text-bone">ERC-8183 Job Primitive</h3>
               <p className="text-xs text-bone-muted leading-relaxed">
-                Manages non-custodial job creation, client funding, provider submission, and evaluator attestation.
+                Manages non-custodial job creation, client funding, provider submission, and evaluator attestation via Altana SDK.
               </p>
             </div>
 
@@ -171,9 +159,9 @@ export default function HomePage() {
               <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/30">
                 x402
               </div>
-              <h3 className="font-sans font-bold text-bone">Binance x402 Payment Rails</h3>
+              <h3 className="font-sans font-bold text-bone">Altana $U / x402 Payment Rails</h3>
               <p className="text-xs text-bone-muted leading-relaxed">
-                HTTP-native stablecoin settlement layer using off-chain EIP-3009/Permit2 authorization signatures.
+                HTTP-native $U stablecoin settlement layer using off-chain EIP-3009/Permit2 authorization signatures.
               </p>
             </div>
           </div>
