@@ -170,7 +170,7 @@ export function AgentCard({ agent, index = 0 }: { agent: AgentData; index?: numb
               href={`/hire/${agent.id}`}
               className="flex w-full items-center justify-center gap-1.5 rounded bg-signal hover:bg-signal-hover py-2 px-3 text-xs font-mono font-bold text-slate-900 transition-colors shadow-sm"
             >
-              <span>{agent.isPreview ? 'Preview Hire Flow' : 'Hire Agent'}</span>
+              <span>Preview Hire Flow</span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
           </div>

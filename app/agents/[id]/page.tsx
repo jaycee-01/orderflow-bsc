@@ -186,7 +186,7 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
               href={`/hire/${agent.id}`}
               className="flex w-full items-center justify-center gap-2 rounded bg-signal hover:bg-signal-hover py-3 font-mono text-sm font-bold text-slate-900 transition-colors shadow-lg shadow-signal/10"
             >
-              <span>{agent.isPreview ? 'Preview Hire Flow' : 'Hire Agent via ERC-8183'}</span>
+              <span>Preview Hire Flow</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
