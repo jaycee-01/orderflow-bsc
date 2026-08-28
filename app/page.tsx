@@ -76,8 +76,8 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredAgents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+          {featuredAgents.map((agent, i) => (
+            <AgentCard key={agent.id} agent={agent} index={i} />
           ))}
         </div>
       </section>

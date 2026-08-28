@@ -102,8 +102,8 @@ export default function AgentsPage() {
       {/* Agents Grid */}
       {filteredAgents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+          {filteredAgents.map((agent, i) => (
+            <AgentCard key={agent.id} agent={agent} index={i} />
           ))}
         </div>
       ) : (
