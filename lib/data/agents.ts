@@ -17,6 +17,7 @@ export interface AgentData {
   ownerAddress: string;
   agentWallet: string;
   isOwnBuild: boolean;
+  isPreview?: boolean; // Flag to designate un-registered upcoming flagship agents
   reputationCount: number;
   summaryValue: string; // e.g. "98.4" for 98.4% rating
   winRate?: string;
@@ -26,9 +27,14 @@ export interface AgentData {
   tags: string[];
   createdAt: string;
   performanceHistory?: { date: string; value: number }[];
+  source?: string;
 }
 
-export const INITIAL_AGENTS: AgentData[] = [
+/**
+ * 4 Flagship agents designed for the hackathon entry.
+ * Marked as isPreview: true until registered on-chain on BSC Testnet.
+ */
+export const FLAGSHIP_AGENTS: AgentData[] = [
   {
     id: "flagship-grid-1",
     agentIdOnchain: "101",
@@ -39,6 +45,7 @@ export const INITIAL_AGENTS: AgentData[] = [
     ownerAddress: "0x3A2b...910F",
     agentWallet: "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
     isOwnBuild: true,
+    isPreview: true,
     reputationCount: 42,
     summaryValue: "99.2",
     winRate: "78.4%",
@@ -69,6 +76,7 @@ export const INITIAL_AGENTS: AgentData[] = [
     ownerAddress: "0x7F1c...41A2",
     agentWallet: "0x1234567890abcdef1234567890abcdef12345678",
     isOwnBuild: true,
+    isPreview: true,
     reputationCount: 31,
     summaryValue: "97.8",
     winRate: "99.1%",
@@ -99,6 +107,7 @@ export const INITIAL_AGENTS: AgentData[] = [
     ownerAddress: "0x9E4d...11C0",
     agentWallet: "0xabcdef1234567890abcdef1234567890abcdef12",
     isOwnBuild: true,
+    isPreview: true,
     reputationCount: 28,
     summaryValue: "96.5",
     winRate: "14.2% APY",
@@ -123,12 +132,13 @@ export const INITIAL_AGENTS: AgentData[] = [
     id: "rebalance-master-4",
     agentIdOnchain: "104",
     name: "BNB Basket Index Rebalancer",
-    description: "Maintains target portfolio weightings across BNB, BTCB, ETH, and CAKE. Triggers rebalancing trades when asset drifts exceed user-defined tolerance bands (e.g. 5%).",
+    description: "Manages concentrated LP price ranges on PancakeSwap V3 and maintains target portfolio weightings across BNB, BTCB, and ETH with automated drift rebalancing.",
     category: "REBALANCING",
     imageUrl: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=600&q=80",
     ownerAddress: "0x2B1a...88E4",
     agentWallet: "0x7890abcdef1234567890abcdef1234567890abcd",
     isOwnBuild: true,
+    isPreview: true,
     reputationCount: 19,
     summaryValue: "95.0",
     winRate: "Low Drift",
@@ -138,7 +148,7 @@ export const INITIAL_AGENTS: AgentData[] = [
       { name: "Portfolio Drift Audit", endpoint: "/api/agents/rebalance-master-4/audit", type: "REST", pricePerCall: "0.15 USDT" },
       { name: "Execute Basket Swap", endpoint: "/api/agents/rebalance-master-4/rebalance", type: "x402-REST", pricePerCall: "0.80 USDT" }
     ],
-    tags: ["Index Fund", "Drift Control", "Portfolio", "BNB Basket"],
+    tags: ["PancakeSwap V3", "Range Manager", "LP Drift", "BNB Basket"],
     createdAt: "2026-08-16T14:00:00Z",
     performanceHistory: [
       { date: "Aug 15", value: 5.0 },
@@ -148,48 +158,6 @@ export const INITIAL_AGENTS: AgentData[] = [
       { date: "Aug 23", value: 1.5 },
       { date: "Aug 25", value: 0.8 }
     ]
-  },
-  {
-    id: "thirdparty-grid-5",
-    agentIdOnchain: "108",
-    name: "AlphaTrend Breakout Bot",
-    description: "Third-party indexed ERC-8004 agent specializing in momentum grid trading during high volatility events on BSC testnet.",
-    category: "GRID_TRADING",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-    ownerAddress: "0x5C3a...77B1",
-    agentWallet: "0x5555666677778888999900001111222233334444",
-    isOwnBuild: false,
-    reputationCount: 15,
-    summaryValue: "92.1",
-    winRate: "71.0%",
-    totalVolumeUsd: "$320,000",
-    avgResponseMs: 510,
-    services: [
-      { name: "Volatility Signals", endpoint: "https://api.alphatrend.io/signals", type: "REST", pricePerCall: "0.30 USDT" }
-    ],
-    tags: ["Indexed", "ERC-8004", "Breakout", "Grid"],
-    createdAt: "2026-08-18T09:00:00Z"
-  },
-  {
-    id: "thirdparty-yield-6",
-    agentIdOnchain: "112",
-    name: "Aave-BSC Yield Arbitrageur",
-    description: "Third-party indexed ERC-8004 yield harvester comparing borrowing vs lending rates to execute non-custodial flash loan yield loops.",
-    category: "YIELD",
-    imageUrl: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80",
-    ownerAddress: "0x44D1...88F9",
-    agentWallet: "0x9999888877776666555544443333222211110000",
-    isOwnBuild: false,
-    reputationCount: 22,
-    summaryValue: "94.3",
-    winRate: "16.8% APY",
-    totalVolumeUsd: "$980,000",
-    avgResponseMs: 380,
-    services: [
-      { name: "Flash Loop Yield", endpoint: "https://yield.aavebsc.org/loop", type: "x402-REST", pricePerCall: "1.20 USDT" }
-    ],
-    tags: ["Indexed", "ERC-8004", "Flash Loan", "Yield"],
-    createdAt: "2026-08-20T11:00:00Z"
   }
 ];
 

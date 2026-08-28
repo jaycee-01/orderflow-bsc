@@ -1,18 +1,51 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ActivityTape } from '@/components/ActivityTape';
 import { AgentCard } from '@/components/AgentCard';
+import { AgentCardSkeleton } from '@/components/AgentCardSkeleton';
 import { HeroStats } from '@/components/HeroStats';
 import { DataWormholeCanvas } from '@/components/DataWormholeCanvas';
-import { INITIAL_AGENTS } from '@/lib/data/agents';
-import { Cpu, ArrowRight, Award } from 'lucide-react';
+import { AgentData } from '@/lib/data/agents';
+import { Cpu, ArrowRight, Award, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function HomePage() {
-  const featuredAgents = INITIAL_AGENTS.slice(0, 4);
+  const [agents, setAgents] = useState<AgentData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAgents = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/agents');
+      if (!res.ok) {
+        throw new Error(`Failed to load marketplace agents (${res.status} ${res.statusText})`);
+      }
+      const data = await res.json();
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
+      setAgents(data.agents || []);
+    } catch (err: any) {
+      console.error('Error fetching agents:', err);
+      setError(err.message || 'Unable to connect to 8004scan agent registry.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
+  const featuredAgents = agents.slice(0, 4);
 
   return (
     <div className="space-y-12 pb-16">
       
-      {/* 1. HERO — Canvas Data Wormhole Background with stripped text content */}
+      {/* 1. HERO — Canvas Data Wormhole Background with centered text */}
       <section className="relative overflow-hidden pt-16 pb-12 border-b border-fog-light/60 bg-fog">
         <DataWormholeCanvas />
 
@@ -63,7 +96,7 @@ export default function HomePage() {
 
       <ActivityTape />
 
-      {/* 4. FEATURED AGENTS — Contains Flagship agent alongside other 3 cards */}
+      {/* 4. FEATURED AGENTS — Real API Data & Preview Flagships */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
           <div>
@@ -75,11 +108,38 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredAgents.map((agent, i) => (
-            <AgentCard key={agent.id} agent={agent} index={i} />
-          ))}
-        </div>
+        {/* Loading Skeleton */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AgentCardSkeleton count={4} />
+          </div>
+        )}
+
+        {/* Explicit Error State */}
+        {!isLoading && error && (
+          <div className="p-8 rounded-lg border border-red-500/30 bg-red-500/10 text-center space-y-4 font-mono">
+            <div className="flex items-center justify-center gap-2 text-red-600 font-bold">
+              <AlertCircle className="h-5 w-5" />
+              <span>Registry Connection Error</span>
+            </div>
+            <p className="text-xs text-bone-muted max-w-xl mx-auto">{error}</p>
+            <button
+              onClick={fetchAgents}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-fog border border-fog-light text-xs font-semibold text-bone hover:border-signal/50 rounded transition-all"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-signal-text" /> Retry Fetch
+            </button>
+          </div>
+        )}
+
+        {/* Loaded Cards */}
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredAgents.map((agent, i) => (
+              <AgentCard key={agent.id} agent={agent} index={i} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 5. THE 3-STANDARD ARCHITECTURE STACK */}
