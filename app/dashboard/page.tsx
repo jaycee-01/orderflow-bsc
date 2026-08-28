@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { INITIAL_ACTIVITY_TAPE, INITIAL_AGENTS } from '@/lib/data/agents';
+import { INITIAL_ACTIVITY_TAPE, FLAGSHIP_AGENTS } from '@/lib/data/agents';
 import { BarChart2, Cpu, CheckCircle2, Clock, ExternalLink, ArrowRight } from 'lucide-react';
 
 export default function DashboardPage() {
