@@ -190,7 +190,7 @@ export async function getNextJobId(): Promise<bigint> {
     abi: COMMERCE_ABI,
     functionName: 'jobCounter',
   });
-  return count + 1n;
+  return count + BigInt(1);
 }
 
 /**

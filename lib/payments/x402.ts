@@ -72,7 +72,7 @@ export function buildHirePaymentTypedData(params: {
     from: params.clientAddress,
     to: params.recipientAddress,
     value: params.amountWei,
-    validAfter: 0n,
+    validAfter: BigInt(0),
     validBefore,
     nonce,
   });

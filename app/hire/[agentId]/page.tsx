@@ -103,11 +103,11 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
 
     try {
       // 1. Determine next on-chain Job ID
-      let predictedJobId = 1n;
+      let predictedJobId = BigInt(1);
       try {
         predictedJobId = await getNextJobId();
       } catch {
-        predictedJobId = 732n;
+        predictedJobId = BigInt(732);
       }
       setOnchainJobId(predictedJobId.toString());
 
