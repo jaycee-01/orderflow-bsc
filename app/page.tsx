@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ActivityTape } from '@/components/ActivityTape';
 import { AgentCard } from '@/components/AgentCard';
 import { HeroStats } from '@/components/HeroStats';
+import { DataWormholeCanvas } from '@/components/DataWormholeCanvas';
 import { INITIAL_AGENTS } from '@/lib/data/agents';
 import { Cpu, ArrowRight, Award } from 'lucide-react';
 
@@ -11,11 +12,13 @@ export default function HomePage() {
   return (
     <div className="space-y-12 pb-16">
       
-      {/* 1. HERO — Stripped down to badge, headline, and description */}
-      <section className="relative overflow-hidden pt-12 pb-6 border-b border-fog-light/60 bg-gradient-to-b from-fog/40 via-ink to-ink">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      {/* 1. HERO — Canvas Data Wormhole Background with stripped text content */}
+      <section className="relative overflow-hidden pt-16 pb-12 border-b border-fog-light/60 bg-fog">
+        <DataWormholeCanvas />
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
           <div className="max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 rounded border border-signal/30 bg-signal/10 px-3 py-1 text-xs font-mono text-signal-text">
+            <div className="inline-flex items-center gap-2 rounded border border-signal/30 bg-fog/90 px-3 py-1 text-xs font-mono text-signal-text shadow-sm backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-signal animate-pulse" />
               BNB Agent Studio Marketplace Entry
             </div>
@@ -24,7 +27,7 @@ export default function HomePage() {
               The AI Agent Marketplace for <span className="text-signal-text underline underline-offset-4 decoration-signal/40">BNB Smart Chain</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-bone-muted max-w-2xl leading-relaxed">
+            <p className="text-base sm:text-lg text-bone-muted max-w-2xl leading-relaxed font-medium">
               Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Altana $U / x402 payment rails.
             </p>
           </div>
