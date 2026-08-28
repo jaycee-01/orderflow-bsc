@@ -3,6 +3,11 @@ import { FLAGSHIP_AGENTS, AgentCategory, AgentData } from '@/lib/data/agents';
 
 export const dynamic = 'force-dynamic';
 
+// In-memory cache for high-performance server responses
+let cachedAgents: AgentData[] | null = null;
+let lastCacheTimestamp = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
 // Heuristic keyword classifier function
 function classifyAgentCategory(name: string, description: string): AgentCategory | null {
   const full = (name + ' ' + description).toLowerCase();
@@ -71,11 +76,8 @@ function isHighQualityAgent(item: any): boolean {
   const name = (item.name || '').toLowerCase();
   const desc = (item.description || '').trim();
 
-  // 1. Exclude null/empty descriptions or placeholder text
   if (!desc || desc.length < 18) return false;
   if (desc.toLowerCase().startsWith('description for')) return false;
-
-  // 2. Exclude test bots and validation spam
   if (name.includes('client-') && name.includes('.agent')) return false;
   if (name.startsWith('agent #')) return false;
   if (desc.toLowerCase().includes('testnet workflow validation')) return false;
@@ -84,66 +86,47 @@ function isHighQualityAgent(item: any): boolean {
   return true;
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category') as AgentCategory | 'ALL' | null;
-  const search = searchParams.get('search')?.toLowerCase();
-  const sort = searchParams.get('sort') || 'reputation';
-  const includePreviews = searchParams.get('includePreviews') !== 'false';
+async function fetchLiveAgentsFromRegistry(): Promise<AgentData[]> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const apiKey = process.env.SCAN8004_API_KEY;
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-  let rawItems: any[] = [];
-  let errorMsg: string | null = null;
+  // Paginate 200 items in parallel
+  const fetchPromises = [0, 50, 100, 150].map((offset) =>
+    fetch(`https://api.8004scan.io/api/v1/agents?chain_id=97&limit=50&offset=${offset}`, {
+      headers,
+      next: { revalidate: 60 },
+    })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .catch(() => ({ items: [] }))
+  );
 
-  try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const apiKey = process.env.SCAN8004_API_KEY;
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+  const results = await Promise.all(fetchPromises);
+  const rawItems: any[] = [];
+  results.forEach((res) => {
+    const pageItems = res.items || res.data || [];
+    if (Array.isArray(pageItems)) {
+      rawItems.push(...pageItems);
+    }
+  });
 
-    // Paginate 8004scan API across multiple pages (offsets 0, 50, 100, 150)
-    // to discover all real registered BSC Testnet agents
-    const fetchPromises = [0, 50, 100, 150].map((offset) =>
-      fetch(`https://api.8004scan.io/api/v1/agents?chain_id=97&limit=50&offset=${offset}`, {
-        headers,
-        next: { revalidate: 60 },
-      })
-        .then((r) => (r.ok ? r.json() : { items: [] }))
-        .catch(() => ({ items: [] }))
-    );
+  // Deduplicate
+  const seen = new Set<string>();
+  const uniqueItems = rawItems.filter((item) => {
+    const key = String(item.token_id || item.tokenId || item.id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
-    const results = await Promise.all(fetchPromises);
-    results.forEach((res) => {
-      const pageItems = res.items || res.data || [];
-      if (Array.isArray(pageItems)) {
-        rawItems.push(...pageItems);
-      }
-    });
-
-    // Deduplicate by token_id / id
-    const seen = new Set<string>();
-    rawItems = rawItems.filter((item) => {
-      const key = String(item.token_id || item.tokenId || item.id);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  } catch (err: any) {
-    console.error('8004scan paginated fetch failed:', err);
-    errorMsg = err.message || 'Failed to fetch live agents from 8004scan';
-  }
-
-  // Filter out low quality spam agents
-  const qualityItems = rawItems.filter(isHighQualityAgent);
-
-  // Map and classify
+  const qualityItems = uniqueItems.filter(isHighQualityAgent);
   const mappedLiveAgents: AgentData[] = [];
+
   qualityItems.forEach((item) => {
     const tokenId = String(item.token_id || item.tokenId || item.id);
     const name = item.name || `BSC Agent #${tokenId}`;
     const description = item.description || '';
-
     const detectedCategory = classifyAgentCategory(name, description);
-
-    // If unclassified, only allow if viewing ALL, but mark category accordingly
     const assignedCategory: AgentCategory = detectedCategory || 'GRID_TRADING';
 
     const score =
@@ -188,17 +171,49 @@ export async function GET(request: Request) {
     });
   });
 
+  return mappedLiveAgents;
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const category = searchParams.get('category') as AgentCategory | 'ALL' | null;
+  const search = searchParams.get('search')?.toLowerCase();
+  const sort = searchParams.get('sort') || 'reputation';
+  const includePreviews = searchParams.get('includePreviews') !== 'false';
+
+  const now = Date.now();
+  let liveAgents: AgentData[] = [];
+  let errorMsg: string | null = null;
+
+  // Serve from memory cache if fresh, otherwise revalidate in background
+  if (cachedAgents && now - lastCacheTimestamp < CACHE_TTL_MS) {
+    liveAgents = cachedAgents;
+  } else {
+    try {
+      liveAgents = await fetchLiveAgentsFromRegistry();
+      if (liveAgents.length > 0) {
+        cachedAgents = liveAgents;
+        lastCacheTimestamp = now;
+      }
+    } catch (err: any) {
+      console.error('Error fetching live agents:', err);
+      errorMsg = err.message;
+      if (cachedAgents) {
+        liveAgents = cachedAgents; // Stale-while-error fallback
+      }
+    }
+  }
+
   // Combine Flagship Previews + Live Quality Agents
   let allAgents: AgentData[] = [];
   if (includePreviews) {
-    allAgents = [...FLAGSHIP_AGENTS, ...mappedLiveAgents];
+    allAgents = [...FLAGSHIP_AGENTS, ...liveAgents];
   } else {
-    allAgents = mappedLiveAgents;
+    allAgents = liveAgents;
   }
 
   let filtered = allAgents;
 
-  // Filter strictly by Category (no falling back into Grid Trading)
   if (category && category !== 'ALL') {
     filtered = filtered.filter((a) => a.category === category);
   }
@@ -218,11 +233,19 @@ export async function GET(request: Request) {
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  return NextResponse.json({
-    success: !errorMsg,
-    total: filtered.length,
-    liveQualityCount: mappedLiveAgents.length,
-    previewCount: FLAGSHIP_AGENTS.length,
-    agents: filtered,
-  });
+  return NextResponse.json(
+    {
+      success: !errorMsg || liveAgents.length > 0,
+      total: filtered.length,
+      liveQualityCount: liveAgents.length,
+      previewCount: FLAGSHIP_AGENTS.length,
+      cached: now - lastCacheTimestamp < CACHE_TTL_MS,
+      agents: filtered,
+    },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    }
+  );
 }
