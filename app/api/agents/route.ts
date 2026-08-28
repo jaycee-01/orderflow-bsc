@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { FLAGSHIP_AGENTS, AgentCategory, AgentData } from '@/lib/data/agents';
 
-export const dynamic = 'force-dynamic';
+// Allow Next.js and Vercel Edge cache to respect revalidate & Cache-Control headers
+export const revalidate = 60;
 
-// In-memory cache for high-performance server responses
+// In-memory cache for fast local responses within the same container
 let cachedAgents: AgentData[] | null = null;
 let lastCacheTimestamp = 0;
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
@@ -91,7 +92,7 @@ async function fetchLiveAgentsFromRegistry(): Promise<AgentData[]> {
   const apiKey = process.env.SCAN8004_API_KEY;
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-  // Paginate 200 items in parallel
+  // Paginate 200 items in parallel across offsets
   const fetchPromises = [0, 50, 100, 150].map((offset) =>
     fetch(`https://api.8004scan.io/api/v1/agents?chain_id=97&limit=50&offset=${offset}`, {
       headers,
@@ -110,7 +111,7 @@ async function fetchLiveAgentsFromRegistry(): Promise<AgentData[]> {
     }
   });
 
-  // Deduplicate
+  // Deduplicate by token ID
   const seen = new Set<string>();
   const uniqueItems = rawItems.filter((item) => {
     const key = String(item.token_id || item.tokenId || item.id);
@@ -185,7 +186,7 @@ export async function GET(request: Request) {
   let liveAgents: AgentData[] = [];
   let errorMsg: string | null = null;
 
-  // Serve from memory cache if fresh, otherwise revalidate in background
+  // Serve from memory cache if fresh (<60s)
   if (cachedAgents && now - lastCacheTimestamp < CACHE_TTL_MS) {
     liveAgents = cachedAgents;
   } else {
@@ -199,7 +200,7 @@ export async function GET(request: Request) {
       console.error('Error fetching live agents:', err);
       errorMsg = err.message;
       if (cachedAgents) {
-        liveAgents = cachedAgents; // Stale-while-error fallback
+        liveAgents = cachedAgents;
       }
     }
   }
@@ -244,7 +245,7 @@ export async function GET(request: Request) {
     },
     {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     }
   );
