@@ -2,32 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 
+  THESIS THEME PRESETS:
+  - Preset "ink" (Dark Ledger)
+  - Preset "paper" (Light Ledger)
+  
+  To switch between presets, update the active preset variables in :root.
+*/
+
 :root {
-  --background: #0E1116;
-  --foreground: #E9E6DD;
+  /* Preset: "ink" (Dark Ledger - preserved for 1-line rollback) */
+  --ink-bg: #0E1116;
+  --ink-fog: #161B22;
+  --ink-fog-light: #1C2128;
+  --ink-bone: #E9E6DD;
+  --ink-bone-muted: #9EA7B3;
+  --ink-signal: #F5A623;
+  --ink-signal-hover: #D98F19;
+  --ink-signal-text: #F5A623;
+  --ink-delta-green: #22c55e;
+  --ink-delta-red: #ef4444;
+
+  /* Preset: "paper" (Light Ledger - active) */
+  --paper-bg: #EDEAE2;
+  --paper-fog: #FBFAF6;
+  --paper-fog-light: #E2DDD2;
+  --paper-bone: #14171C;
+  --paper-bone-muted: #5C6470;
+  --paper-signal: #F5A623;
+  --paper-signal-hover: #D98F19;
+  --paper-signal-text: #C97A0D;
+  --paper-delta-green: #15803d;
+  --paper-delta-red: #dc2626;
+
+  /* --- ACTIVE PRESET MAPPING (Current: "paper") --- */
+  /* To revert back to "ink" dark mode, change all var(--paper-*) below to var(--ink-*) */
+  --bg: var(--paper-bg);
+  --surface: var(--paper-fog);
+  --surface-light: var(--paper-fog-light);
+  --text-main: var(--paper-bone);
+  --text-muted: var(--paper-bone-muted);
+  --accent: var(--paper-signal);
+  --accent-hover: var(--paper-signal-hover);
+  --accent-text: var(--paper-signal-text);
+  --d-green: var(--paper-delta-green);
+  --d-red: var(--paper-delta-red);
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg);
+  color: var(--text-main);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Custom scrollbar for dark ledger theme */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0E1116;
+  background: var(--bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1C2128;
+  background: var(--surface-light);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #F5A623;
+  background: var(--accent);
 }

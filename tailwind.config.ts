@@ -9,16 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0E1116",
-        fog: "#161B22",
-        "fog-light": "#1C2128",
-        bone: "#E9E6DD",
-        "bone-muted": "#9EA7B3",
-        signal: "#F5A623",
-        "signal-hover": "#D98F19",
+        ink: "var(--bg)",
+        fog: "var(--surface)",
+        "fog-light": "var(--surface-light)",
+        bone: "var(--text-main)",
+        "bone-muted": "var(--text-muted)",
+        signal: "var(--accent)",
+        "signal-hover": "var(--accent-hover)",
+        "signal-text": "var(--accent-text)",
         delta: {
-          green: "#22c55e",
-          red: "#ef4444",
+          green: "var(--d-green)",
+          red: "var(--d-red)",
         },
       },
       fontFamily: {

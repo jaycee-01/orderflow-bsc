@@ -42,10 +42,10 @@ export function HeroStats() {
         <div className="text-xs text-bone-muted uppercase tracking-wider">BSC Indexed Agents</div>
       </div>
       <div>
-        <div className="text-2xl font-bold text-signal">
+        <div className="text-2xl font-bold text-signal-text">
           {categoriesCount}/4
         </div>
-        <div className="text-xs text-bone-muted uppercase tracking-wider">Equal Depth Categories</div>
+        <div className="text-xs text-bone-muted uppercase tracking-wider font-medium">Equal Depth Categories</div>
       </div>
       <div>
         <div className="text-2xl font-bold text-bone">
