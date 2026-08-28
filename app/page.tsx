@@ -17,7 +17,7 @@ export default function HomePage() {
         <DataWormholeCanvas />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="max-w-3xl space-y-6">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
             <div className="inline-flex items-center gap-2 rounded border border-signal/30 bg-fog/90 px-3 py-1 text-xs font-mono text-signal-text shadow-sm backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-signal animate-pulse" />
               BNB Agent Studio Marketplace Entry
@@ -27,7 +27,7 @@ export default function HomePage() {
               The AI Agent Marketplace for <span className="text-signal-text underline underline-offset-4 decoration-signal/40">BNB Smart Chain</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-bone-muted max-w-2xl leading-relaxed font-medium">
+            <p className="text-base sm:text-lg text-bone max-w-2xl mx-auto leading-relaxed font-medium opacity-80">
               Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Altana $U / x402 payment rails.
             </p>
           </div>
@@ -36,7 +36,7 @@ export default function HomePage() {
 
       {/* 2. CTA STRIP — Action buttons immediately after hero */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-4">
           <Link
             href="/agents"
             className="flex items-center gap-2 rounded bg-signal px-6 py-3 font-mono text-sm font-bold text-slate-900 hover:bg-signal-hover transition-colors shadow-lg shadow-signal/10"

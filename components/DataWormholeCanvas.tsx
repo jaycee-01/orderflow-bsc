@@ -45,7 +45,7 @@ export function DataWormholeCanvas() {
     // Initialize 120 orbital particles
     const particleCount = 120;
     const particles: Particle[] = Array.from({ length: particleCount }, () => {
-      const maxRadius = Math.min(width, height) * 0.45;
+      const maxRadius = Math.max(width, height) * 0.55;
       const r = Math.random() * maxRadius + 30;
       const angle = Math.random() * Math.PI * 2;
       return {
@@ -83,7 +83,7 @@ export function DataWormholeCanvas() {
           // Slowly pull particles in an orbital vortex
           p.r -= 0.05;
           if (p.r < 20) {
-            p.r = Math.min(width, height) * 0.45;
+            p.r = Math.max(width, height) * 0.55;
           }
           p.x = width * 0.5 + Math.cos(p.angle) * p.r;
           p.y = height * 0.5 + Math.sin(p.angle) * (p.r * 0.6); // slight ellipse
@@ -132,7 +132,7 @@ export function DataWormholeCanvas() {
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
       <canvas ref={canvasRef} className="w-full h-full block" />
       {/* Subtle radial gradient overlay to ensure strong text legibility */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--bg)_80%)] opacity-90" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--bg)_90%)] opacity-70" />
     </div>
   );
 }
