@@ -10,7 +10,7 @@ import { DataWormholeCanvas } from '@/components/DataWormholeCanvas';
 import { TypingTerminal } from '@/components/TypingTerminal';
 import { HiringFlowTimeline } from '@/components/HiringFlowTimeline';
 import { AgentData } from '@/lib/data/agents';
-import { Cpu, ArrowRight, Award, AlertCircle, RefreshCw } from 'lucide-react';
+import { Cpu, ArrowRight, Award, AlertCircle, RefreshCw, Terminal, ExternalLink, SlidersHorizontal, ShieldCheck, Zap } from 'lucide-react';
 
 /* Custom hook for scroll reveal consistency across sections */
 function useScrollReveal() {
@@ -39,12 +39,22 @@ function useScrollReveal() {
   return { ref, isVisible: isVisible || reducedMotion };
 }
 
+const CATEGORIES = [
+  { id: 'ALL', label: 'All Agents', icon: Cpu },
+  { id: 'GRID_TRADING', label: 'Grid Trading', icon: SlidersHorizontal },
+  { id: 'HEALTH_FACTOR', label: 'Health Guard', icon: ShieldCheck },
+  { id: 'YIELD', label: 'Yield Harvester', icon: Zap },
+  { id: 'REBALANCING', label: 'Rebalancer', icon: RefreshCw },
+];
+
 export default function HomePage() {
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
   const stackReveal = useScrollReveal();
+  const heroTerminalReveal = useScrollReveal();
 
   const fetchAgents = async () => {
     setIsLoading(true);
@@ -71,72 +81,166 @@ export default function HomePage() {
     fetchAgents();
   }, []);
 
-  const featuredAgents = agents.slice(0, 4);
+  // Filter agents by selected category
+  const filteredAgents = selectedCategory === 'ALL'
+    ? agents
+    : agents.filter(a => a.category?.toUpperCase() === selectedCategory);
+
+  const featuredAgents = filteredAgents.slice(0, 4);
 
   return (
     <div className="space-y-12 pb-16">
       
-      {/* 1. HERO — Canvas Data Wormhole Background with centered text */}
+      {/* 1. HERO — Canvas Data Wormhole Background with Dual-Column Hero Terminal */}
       <section className="relative overflow-hidden pt-16 pb-12 border-b border-fog-light/60 bg-fog">
         <DataWormholeCanvas />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 rounded border border-signal/30 bg-fog/90 px-3 py-1 text-xs font-mono text-signal-text shadow-sm backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-signal animate-pulse" />
-              BNB Agent Studio Marketplace Entry
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Left Column: Headline & Primary CTAs */}
+            <div className="lg:col-span-7 space-y-6 text-left">
+              <div className="inline-flex items-center gap-2 rounded border border-signal/30 bg-fog/90 px-3 py-1 text-xs font-mono text-signal-text shadow-sm backdrop-blur-sm">
+                <span className="h-2 w-2 rounded-full bg-signal animate-pulse" />
+                BNB Agent Studio Marketplace Entry
+              </div>
+
+              <h1 className="font-sans text-4xl sm:text-5xl font-extrabold tracking-tight text-bone leading-[1.15]">
+                The AI Agent Marketplace for <span className="text-signal-text underline underline-offset-4 decoration-signal/40">BNB Smart Chain</span>
+              </h1>
+
+              <p className="text-base sm:text-lg text-bone max-w-2xl leading-relaxed font-medium opacity-80">
+                Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Altana $U / x402 payment rails.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <Link
+                  href="/agents"
+                  className="flex items-center gap-2 rounded bg-signal px-6 py-3 font-mono text-sm font-bold text-slate-900 hover:bg-signal-hover transition-colors shadow-lg shadow-signal/10"
+                >
+                  <Cpu className="h-4 w-4" />
+                  Explore Marketplace
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <Link
+                  href="/advantage-report"
+                  className="flex items-center gap-2 rounded border border-fog-light bg-fog px-6 py-3 font-mono text-sm font-medium text-bone hover:border-signal/50 hover:bg-fog-light/50 transition-all"
+                >
+                  <Award className="h-4 w-4 text-signal-text" />
+                  TermiX Advantage Report
+                </Link>
+              </div>
             </div>
 
-            <h1 className="font-sans text-4xl sm:text-5xl font-extrabold tracking-tight text-bone leading-[1.15]">
-              The AI Agent Marketplace for <span className="text-signal-text underline underline-offset-4 decoration-signal/40">BNB Smart Chain</span>
-            </h1>
+            {/* Right Column: Interactive Hero Agent Sandbox Terminal */}
+            <div
+              ref={heroTerminalReveal.ref}
+              className={`lg:col-span-5 transition-all duration-700 ease-out ${
+                heroTerminalReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
+              <div className="relative overflow-hidden rounded-xl border border-fog-light bg-slate-950/90 shadow-2xl p-5 font-mono text-xs text-bone backdrop-blur-md">
+                
+                {/* Soft Ambient Radial Glow */}
+                <div className="pointer-events-none absolute -top-12 -right-12 h-48 w-48 rounded-full bg-signal/10 blur-3xl animate-ambient-glow" />
 
-            <p className="text-base sm:text-lg text-bone max-w-2xl mx-auto leading-relaxed font-medium opacity-80">
-              Browse, evaluate real-time ERC-8004 reputation, and hire autonomous trading and DeFi agents on BSC. Built with native ERC-8183 job escrow and Altana $U / x402 payment rails.
-            </p>
+                {/* Terminal Title Bar */}
+                <div className="flex items-center justify-between border-b border-fog-light/60 pb-3 mb-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-4 w-4 text-signal-text" />
+                    <span className="font-bold text-bone">BSC Testnet Execution Sandbox</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-semibold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> ChainID: 97
+                  </span>
+                </div>
+
+                {/* Simulated Live Execution Telemetry */}
+                <div className="space-y-2 text-[11px] leading-relaxed">
+                  <div className="flex justify-between text-bone-muted">
+                    <span>Registry:</span>
+                    <a
+                      href="https://testnet.bscscan.com/address/0x8004A818BFB912233c491871b3d84c89A494BD9e"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-signal-text hover:underline flex items-center gap-1"
+                    >
+                      0x8004...BD9e <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
+                  <div className="flex justify-between text-bone-muted">
+                    <span>Active Escrows:</span>
+                    <span className="text-bone font-bold">ERC-8183 Non-Custodial</span>
+                  </div>
+                  <div className="flex justify-between text-bone-muted">
+                    <span>Settlement Rail:</span>
+                    <span className="text-bone font-bold">Altana $U / x402</span>
+                  </div>
+                </div>
+
+                {/* Embedded Live Typing Stream */}
+                <div className="mt-4 pt-3 border-t border-fog-light/50">
+                  <TypingTerminal
+                    text="> 8004scan.init() -> 4 Flagship Agents Verified on BSC Testnet. Ready for Job Escrow."
+                    speedMs={18}
+                  />
+                </div>
+
+                {/* Quick Action Footer Link */}
+                <div className="mt-4 pt-3 border-t border-fog-light/40 flex justify-between items-center text-[10px] text-bone-muted">
+                  <span>Protocol Standard: ERC-8004 v1.0</span>
+                  <Link href="/agents/register" className="text-signal-text hover:underline font-bold flex items-center gap-1">
+                    Mint Identity NFT <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
 
-      {/* 2. CTA STRIP — Action buttons immediately after hero */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link
-            href="/agents"
-            className="flex items-center gap-2 rounded bg-signal px-6 py-3 font-mono text-sm font-bold text-slate-900 hover:bg-signal-hover transition-colors shadow-lg shadow-signal/10"
-          >
-            <Cpu className="h-4 w-4" />
-            Explore Agent Marketplace
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-
-          <Link
-            href="/advantage-report"
-            className="flex items-center gap-2 rounded border border-fog-light bg-fog px-6 py-3 font-mono text-sm font-medium text-bone hover:border-signal/50 hover:bg-fog-light/50 transition-all"
-          >
-            <Award className="h-4 w-4 text-signal-text" />
-            TermiX Advantage Report
-          </Link>
-        </div>
-      </section>
-
-      {/* 3. HERO STATS BAR & LIVE TICKER */}
+      {/* 2. HERO STATS BAR & LIVE TICKER */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <HeroStats />
       </section>
 
       <ActivityTape />
 
-      {/* 4. FEATURED AGENTS — Real API Data & Preview Flagships */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
+      {/* 3. FEATURED AGENTS WITH CATEGORY TAB FILTERING */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="text-xs font-mono text-signal-text uppercase tracking-wider font-semibold">Four Core Categories</div>
+            <div className="text-xs font-mono text-signal-text uppercase tracking-wider font-semibold">Autonomous Strategy Registry</div>
             <h2 className="text-2xl font-bold text-bone tracking-tight mt-1">Featured Autonomous Agents</h2>
           </div>
-          <Link href="/agents" className="font-mono text-xs text-signal-text hover:underline flex items-center gap-1 mt-2 sm:mt-0 font-semibold">
+          
+          <Link href="/agents" className="font-mono text-xs text-signal-text hover:underline flex items-center gap-1 font-semibold shrink-0">
             View All Marketplace Listings <ArrowRight className="h-3.5 w-3.5" />
           </Link>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-fog-light/60">
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`flex items-center gap-1.5 rounded px-3.5 py-1.5 font-mono text-xs font-semibold whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-signal text-slate-950 shadow-sm'
+                    : 'bg-fog-light/40 text-bone-muted border border-fog-light hover:border-signal/40 hover:text-bone'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Loading Skeleton */}
@@ -165,20 +269,34 @@ export default function HomePage() {
 
         {/* Loaded Cards */}
         {!isLoading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredAgents.map((agent, i) => (
-              <AgentCard key={agent.id} agent={agent} index={i} />
-            ))}
-          </div>
+          <>
+            {featuredAgents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredAgents.map((agent, i) => (
+                  <AgentCard key={agent.id} agent={agent} index={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 rounded-lg border border-fog-light bg-fog text-center space-y-2 font-mono text-xs">
+                <p className="text-bone">No agents currently indexed under category "{selectedCategory.replace('_', ' ')}".</p>
+                <button
+                  onClick={() => setSelectedCategory('ALL')}
+                  className="text-signal-text hover:underline font-bold"
+                >
+                  View All Marketplace Agents
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 
-      {/* 5. NEW SECTION — "HOW HIRING WORKS" TIMELINE */}
+      {/* 4. "HOW HIRING WORKS" 4-STEP TIMELINE */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <HiringFlowTimeline />
       </section>
 
-      {/* 6. THE 3-STANDARD ARCHITECTURE STACK */}
+      {/* 5. THE 3-STANDARD ARCHITECTURE STACK */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
         <div
           ref={stackReveal.ref}
