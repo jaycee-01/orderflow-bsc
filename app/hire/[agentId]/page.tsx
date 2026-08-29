@@ -47,6 +47,13 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
   const budgetNum = parseFloat(budget) || 0;
   const hasInsufficientBalance = isConnected && uBalance < budgetNum;
 
+  const extractAgentPrice = (a: AgentData): string => {
+    if (a.services && a.services.length > 0 && a.services[0].pricePerCall) {
+      return a.services[0].pricePerCall.split(' ')[0];
+    }
+    return '0.10';
+  };
+
   useEffect(() => {
     async function loadAgent() {
       setLoading(true);
@@ -57,7 +64,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
           if (data.agent) {
             setAgent(data.agent);
             setTaskDesc(`Execute ${data.agent.name} strategy against BSC Testnet position`);
-            setBudget(data.agent.price || '0.10');
+            setBudget(extractAgentPrice(data.agent));
             return;
           }
         }
@@ -68,7 +75,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       const fallback = FLAGSHIP_AGENTS.find((a) => a.id === params.agentId || a.agentIdOnchain === params.agentId) || FLAGSHIP_AGENTS[0];
       setAgent(fallback);
       setTaskDesc(`Execute ${fallback.name} strategy against BSC Testnet position`);
-      setBudget(fallback.price || '0.10');
+      setBudget(extractAgentPrice(fallback));
       setLoading(false);
     }
     loadAgent().finally(() => setLoading(false));
@@ -123,7 +130,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
         throw new Error(data.error || 'Failed to fetch quote');
       }
 
-      setBudget(data.quotedPrice || agent.price || '0.10');
+      setBudget(data.quotedPrice || extractAgentPrice(agent));
       setQuoteType(data.quoteType);
       setQuoteLabel(data.label);
       setFlowStep('QUOTE_READY');
