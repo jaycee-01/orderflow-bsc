@@ -196,9 +196,21 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: ERC-8004 */}
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
-              <div>
+            {/* Card 1: ERC-8004 Identity & Reputation */}
+            <div className="relative overflow-hidden p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              
+              {/* Soft Ambient Breathing Glow */}
+              <div className="pointer-events-none absolute -top-8 -right-8 h-40 w-40 rounded-full bg-signal/10 blur-2xl animate-ambient-glow" />
+              
+              {/* Faint Shield/Trust Outline Texture */}
+              <div className="pointer-events-none absolute top-4 right-4 opacity-20 text-signal/40">
+                <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <path d="M50 15 L80 25 V50 C80 70 50 85 50 85 C50 85 20 70 20 50 V25 Z" strokeDasharray="3 3" />
+                  <circle cx="50" cy="45" r="10" strokeDasharray="2 2" />
+                </svg>
+              </div>
+
+              <div className="relative z-10">
                 <div className="flex h-10 w-10 items-center justify-center rounded bg-amber-500/10 text-amber-600 font-mono font-bold text-sm border border-amber-500/30">
                   8004
                 </div>
@@ -207,15 +219,30 @@ export default function HomePage() {
                   Verifies agent identity NFTs and indexes on-chain feedback scores directly from BSC Testnet registries.
                 </p>
               </div>
-              <TypingTerminal
-                text="> agent.verify / identity 0x8004...b9e / rep.score 4.9 / √ registry confirmed"
-                speedMs={20}
-              />
+              
+              <div className="relative z-10">
+                <TypingTerminal
+                  text="> agent.verify / identity 0x8004...b9e / rep.score 4.9 / √ registry confirmed"
+                  speedMs={20}
+                />
+              </div>
             </div>
 
-            {/* Card 2: ERC-8183 */}
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
-              <div>
+            {/* Card 2: ERC-8183 Job Escrow */}
+            <div className="relative overflow-hidden p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              
+              {/* Soft Ambient Breathing Glow */}
+              <div className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rounded-full bg-signal/10 blur-2xl animate-ambient-glow" />
+
+              {/* Faint Handshake/Escrow Box Outline Texture */}
+              <div className="pointer-events-none absolute top-4 right-4 opacity-20 text-signal/40">
+                <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <rect x="25" y="30" width="50" height="45" rx="4" strokeDasharray="3 3" />
+                  <path d="M35 30 V 20 A 15 15 0 0 1 65 20 V 30" strokeDasharray="2 2" />
+                </svg>
+              </div>
+
+              <div className="relative z-10">
                 <div className="flex h-10 w-10 items-center justify-center rounded bg-signal/15 text-signal-text font-mono font-bold text-sm border border-signal/40">
                   8183
                 </div>
@@ -224,15 +251,29 @@ export default function HomePage() {
                   Manages non-custodial job creation, client funding, provider submission, and evaluator attestation via Altana SDK.
                 </p>
               </div>
-              <TypingTerminal
-                text="> job.create / provider 0x71a...c3 / budget 0.1 $U / status: OPEN → FUNDED"
-                speedMs={20}
-              />
+
+              <div className="relative z-10">
+                <TypingTerminal
+                  text="> job.create / provider 0x71a...c3 / budget 0.1 $U / status: OPEN → FUNDED"
+                  speedMs={20}
+                />
+              </div>
             </div>
 
-            {/* Card 3: x402 */}
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
-              <div>
+            {/* Card 3: x402 Payment Rails */}
+            <div className="relative overflow-hidden p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              
+              {/* Soft Ambient Breathing Glow */}
+              <div className="pointer-events-none absolute -top-8 -left-8 h-40 w-40 rounded-full bg-signal/10 blur-2xl animate-ambient-glow" />
+
+              {/* Faint Lightning Bolt / Payment Rail Outline Texture */}
+              <div className="pointer-events-none absolute top-4 right-4 opacity-20 text-signal/40">
+                <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <polygon points="55,15 25,55 45,55 35,85 75,45 55,45" strokeDasharray="3 3" />
+                </svg>
+              </div>
+
+              <div className="relative z-10">
                 <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 font-mono font-bold text-sm border border-emerald-500/30">
                   x402
                 </div>
@@ -241,10 +282,13 @@ export default function HomePage() {
                   HTTP-native $U stablecoin settlement layer using off-chain EIP-3009/Permit2 authorization signatures.
                 </p>
               </div>
-              <TypingTerminal
-                text="> payment.authorize / rail: EIP-3009 / settle: 0.4s / √ escrow locked"
-                speedMs={20}
-              />
+
+              <div className="relative z-10">
+                <TypingTerminal
+                  text="> payment.authorize / rail: EIP-3009 / settle: 0.4s / √ escrow locked"
+                  speedMs={20}
+                />
+              </div>
             </div>
           </div>
         </div>

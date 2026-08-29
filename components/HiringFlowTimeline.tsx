@@ -12,6 +12,7 @@ interface StepDetail {
   badge: string;
   icon: typeof CheckCircle2;
   techNote: string;
+  svgShape: React.ReactNode;
 }
 
 const STEPS: StepDetail[] = [
@@ -23,7 +24,17 @@ const STEPS: StepDetail[] = [
     fullDesc: 'Client defines task scope, performance parameters, and target budget in $U stablecoin.',
     badge: 'State 0: Pending Escrow',
     icon: CheckCircle2,
-    techNote: 'ERC-8183 createJob() registers contract state on BSC Testnet with evaluator specifications.'
+    techNote: 'ERC-8183 createJob() registers contract state on BSC Testnet with evaluator specifications.',
+    // Faint document / spec sheet outline
+    svgShape: (
+      <svg className="w-48 h-48 text-signal/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+        <rect x="25" y="15" width="50" height="70" rx="4" strokeDasharray="3 3" />
+        <line x1="35" y1="30" x2="65" y2="30" />
+        <line x1="35" y1="42" x2="60" y2="42" />
+        <line x1="35" y1="54" x2="55" y2="54" />
+        <circle cx="60" cy="68" r="8" strokeDasharray="2 2" />
+      </svg>
+    )
   },
   {
     id: 'funded',
@@ -33,7 +44,15 @@ const STEPS: StepDetail[] = [
     fullDesc: 'Client deposits job payment into non-custodial ERC-8183 escrow via Altana $U / x402 payment rail. Funds remain securely locked — nothing reaches the agent yet.',
     badge: 'State 1: Escrow Locked',
     icon: DollarSign,
-    techNote: 'x402 EIP-3009 off-chain permit signature locks $U tokens directly inside ERC-8183 escrow.'
+    techNote: 'x402 EIP-3009 off-chain permit signature locks $U tokens directly inside ERC-8183 escrow.',
+    // Faint escrow box + lock outline
+    svgShape: (
+      <svg className="w-48 h-48 text-signal/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+        <rect x="20" y="35" width="60" height="45" rx="4" strokeDasharray="3 3" />
+        <path d="M35 35 V 25 A 15 15 0 0 1 65 25 V 35" strokeDasharray="2 2" />
+        <circle cx="50" cy="55" r="5" />
+      </svg>
+    )
   },
   {
     id: 'submitted',
@@ -43,7 +62,17 @@ const STEPS: StepDetail[] = [
     fullDesc: 'The hired AI Agent picks up the funded job payload, executes strategy on-chain or off-chain, and submits verifiable output back to the contract.',
     badge: 'State 2: Awaiting Attestation',
     icon: Send,
-    techNote: 'Agent calls submitJob() providing cryptographic proof/hash of completed deliverable.'
+    techNote: 'Agent calls submitJob() providing cryptographic proof/hash of completed deliverable.',
+    // Faint execution nodes / payload outline
+    svgShape: (
+      <svg className="w-48 h-48 text-signal/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+        <circle cx="30" cy="50" r="12" strokeDasharray="3 3" />
+        <circle cx="70" cy="30" r="10" strokeDasharray="3 3" />
+        <circle cx="70" cy="70" r="10" strokeDasharray="3 3" />
+        <line x1="42" y1="45" x2="60" y2="35" strokeDasharray="2 2" />
+        <line x1="42" y1="55" x2="60" y2="65" strokeDasharray="2 2" />
+      </svg>
+    )
   },
   {
     id: 'completed',
@@ -53,7 +82,14 @@ const STEPS: StepDetail[] = [
     fullDesc: 'Evaluator node verifies output validity. Upon successful attestation, $U escrow releases automatically to agent wallet, updating ERC-8004 reputation score.',
     badge: 'State 3: Settlement Done',
     icon: ShieldCheck,
-    techNote: 'completeJob() releases escrowed $U to agent and increments on-chain ERC-8004 reputation.'
+    techNote: 'completeJob() releases escrowed $U to agent and increments on-chain ERC-8004 reputation.',
+    // Faint checkmark shield outline
+    svgShape: (
+      <svg className="w-48 h-48 text-signal/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+        <path d="M50 15 L80 25 V50 C80 70 50 85 50 85 C50 85 20 70 20 50 V25 Z" strokeDasharray="3 3" />
+        <path d="M38 48 L46 56 L62 40" strokeWidth="1.5" />
+      </svg>
+    )
   }
 ];
 
@@ -165,9 +201,18 @@ export function HiringFlowTimeline() {
         </div>
       </div>
 
-      {/* Step Detail Panel */}
+      {/* Step Detail Panel with Soft Ambient Glow & Subtle Technical Outline */}
       <div className="relative overflow-hidden rounded-lg border border-fog-light/80 bg-fog-light/30 p-6 transition-all duration-300">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+        
+        {/* Soft Radial Ambient Glow */}
+        <div className="pointer-events-none absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-signal/10 blur-3xl animate-ambient-glow" />
+
+        {/* Contextual Technical SVG Outline Shape (Faint Texture) */}
+        <div className="pointer-events-none absolute top-1/2 right-8 -translate-y-1/2 opacity-25 transition-opacity duration-500">
+          {currentStep.svgShape}
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-3 max-w-xl">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-signal/15 border border-signal/30 text-signal-text">

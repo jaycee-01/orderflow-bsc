@@ -85,3 +85,27 @@ body {
     opacity: 0;
   }
 }
+
+/* Ambient Breathing Glow Pulse Keyframes */
+@keyframes ambientGlowPulse {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.05;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.08;
+  }
+}
+
+.animate-ambient-glow {
+  animation: ambientGlowPulse 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ambient-glow {
+    animation: none !important;
+    transform: scale(1) !important;
+    opacity: 0.06 !important;
+  }
+}
