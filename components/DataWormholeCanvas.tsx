@@ -58,24 +58,24 @@ export function DataWormholeCanvas() {
     window.addEventListener('resize', handleResize);
 
     // Initialize 3D Neural Nodes grid
-    const nodeCount = 65;
+    const nodeCount = 75;
     const nodes: Node3D[] = [];
-    const focalLength = 350;
+    const focalLength = 320;
 
     for (let i = 0; i < nodeCount; i++) {
-      const baseX = (Math.random() - 0.5) * width * 1.3;
-      const baseY = (Math.random() - 0.5) * height * 1.3;
-      const z = Math.random() * 400 + 100;
+      const baseX = (Math.random() - 0.5) * width * 1.2;
+      const baseY = (Math.random() - 0.5) * height * 1.2;
+      const z = Math.random() * 350 + 80;
       nodes.push({
         x: baseX,
         y: baseY,
         z,
         baseX,
         baseY,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        vz: (Math.random() - 0.5) * 0.2,
-        radius: Math.random() * 2 + 1.5,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        vz: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 2.5 + 2,
       });
     }
 
@@ -87,8 +87,8 @@ export function DataWormholeCanvas() {
       ctx.clearRect(0, 0, width, height);
 
       // Smooth mouse interpolation
-      mouseX += (targetMouseX - mouseX) * 0.05;
-      mouseY += (targetMouseY - mouseY) * 0.05;
+      mouseX += (targetMouseX - mouseX) * 0.08;
+      mouseY += (targetMouseY - mouseY) * 0.08;
 
       const centerX = width / 2;
       const centerY = height / 2;
@@ -107,7 +107,7 @@ export function DataWormholeCanvas() {
           const maxDistY = height * 0.65;
           if (Math.abs(node.x) > maxDistX) node.vx *= -1;
           if (Math.abs(node.y) > maxDistY) node.vy *= -1;
-          if (node.z < 80 || node.z > 500) node.vz *= -1;
+          if (node.z < 60 || node.z > 450) node.vz *= -1;
 
           // Interactive Mouse Physics (Repel/Attract field)
           const projX = centerX + (node.x * focalLength) / node.z;
@@ -116,10 +116,10 @@ export function DataWormholeCanvas() {
           const dy = mouseY - projY;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
-          if (dist < 140) {
-            const force = (140 - dist) / 140;
-            node.x -= (dx / dist) * force * 4;
-            node.y -= (dy / dist) * force * 4;
+          if (dist < 160) {
+            const force = (160 - dist) / 160;
+            node.x -= (dx / dist) * force * 5;
+            node.y -= (dy / dist) * force * 5;
           }
         }
 
@@ -132,11 +132,10 @@ export function DataWormholeCanvas() {
 
       // Spawn Data Pulse Packets between nearby nodes periodically
       const now = Date.now();
-      if (!prefersReducedMotion && now - lastPulseTime > 1200 && pulses.length < 8) {
+      if (!prefersReducedMotion && now - lastPulseTime > 800 && pulses.length < 12) {
         const fromIdx = Math.floor(Math.random() * projectedNodes.length);
-        // Find a nearby neighbor
         let bestTo = -1;
-        let minDist = 180;
+        let minDist = 200;
         for (let j = 0; j < projectedNodes.length; j++) {
           if (j === fromIdx) continue;
           const dx = projectedNodes[fromIdx].px - projectedNodes[j].px;
@@ -153,14 +152,14 @@ export function DataWormholeCanvas() {
             fromNode: fromIdx,
             toNode: bestTo,
             progress: 0,
-            speed: Math.random() * 0.02 + 0.015,
+            speed: Math.random() * 0.025 + 0.02,
           });
           lastPulseTime = now;
         }
       }
 
-      // Draw Neural Network Synapses / Connecting Lines
-      const maxConnectDist = 145;
+      // Draw High-Contrast Synapses / Connecting Lines
+      const maxConnectDist = 160;
       for (let i = 0; i < projectedNodes.length; i++) {
         for (let j = i + 1; j < projectedNodes.length; j++) {
           const n1 = projectedNodes[i];
@@ -170,12 +169,12 @@ export function DataWormholeCanvas() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < maxConnectDist) {
-            const alpha = (1 - dist / maxConnectDist) * 0.25 * Math.min(n1.scale, n2.scale);
+            const alpha = (1 - dist / maxConnectDist) * 0.55 * Math.min(n1.scale, n2.scale);
             ctx.beginPath();
             ctx.moveTo(n1.px, n1.py);
             ctx.lineTo(n2.px, n2.py);
             ctx.strokeStyle = `rgba(245, 166, 35, ${alpha})`;
-            ctx.lineWidth = 0.8;
+            ctx.lineWidth = 1.2;
             ctx.stroke();
           }
         }
@@ -200,10 +199,10 @@ export function DataWormholeCanvas() {
 
           // Glowing Signal Amber Pulse Packet
           ctx.beginPath();
-          ctx.arc(currX, currY, 3, 0, Math.PI * 2);
+          ctx.arc(currX, currY, 4, 0, Math.PI * 2);
           ctx.fillStyle = '#F5A623';
           ctx.shadowColor = '#F5A623';
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 14;
           ctx.fill();
           ctx.shadowBlur = 0;
         }
@@ -212,21 +211,22 @@ export function DataWormholeCanvas() {
       // Draw Neural Nodes
       projectedNodes.forEach((n) => {
         ctx.beginPath();
-        ctx.arc(n.px, n.py, Math.max(1, n.orig.radius * n.scale), 0, Math.PI * 2);
+        ctx.arc(n.px, n.py, Math.max(2, n.orig.radius * n.scale), 0, Math.PI * 2);
         
         // Highlight nodes closer to cursor
         const dx = mouseX - n.px;
         const dy = mouseY - n.py;
         const distToMouse = Math.sqrt(dx * dx + dy * dy);
-        const isHovered = distToMouse < 80;
+        const isHovered = distToMouse < 90;
 
         if (isHovered) {
           ctx.fillStyle = '#F5A623';
           ctx.shadowColor = '#F5A623';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 16;
         } else {
-          ctx.fillStyle = `rgba(158, 167, 179, ${0.35 * n.scale})`;
-          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(245, 166, 35, ${0.7 * n.scale})`;
+          ctx.shadowColor = '#F5A623';
+          ctx.shadowBlur = 6;
         }
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -249,8 +249,8 @@ export function DataWormholeCanvas() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
       <canvas ref={canvasRef} className="w-full h-full block" />
-      {/* Soft radial overlay for perfect text contrast */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,var(--bg)_85%)] opacity-80" />
+      {/* Light radial vignette overlay for crisp text readability */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--bg)_85%)] opacity-50" />
     </div>
   );
 }

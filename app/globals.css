@@ -4,14 +4,14 @@
 
 /* 
   THESIS THEME PRESETS:
-  - Preset "ink" (Dark Ledger)
+  - Preset "ink" (Dark Ledger - active for dark Cyberpunk/OKX.AI aesthetic)
   - Preset "paper" (Light Ledger)
   
   To switch between presets, update the active preset variables in :root.
 */
 
 :root {
-  /* Preset: "ink" (Dark Ledger - preserved for 1-line rollback) */
+  /* Preset: "ink" (Dark Ledger - active) */
   --ink-bg: #0E1116;
   --ink-fog: #161B22;
   --ink-fog-light: #1C2128;
@@ -23,7 +23,7 @@
   --ink-delta-green: #22c55e;
   --ink-delta-red: #ef4444;
 
-  /* Preset: "paper" (Light Ledger - active) */
+  /* Preset: "paper" (Light Ledger) */
   --paper-bg: #EDEAE2;
   --paper-fog: #FBFAF6;
   --paper-fog-light: #E2DDD2;
@@ -35,18 +35,17 @@
   --paper-delta-green: #15803d;
   --paper-delta-red: #dc2626;
 
-  /* --- ACTIVE PRESET MAPPING (Current: "paper") --- */
-  /* To revert back to "ink" dark mode, change all var(--paper-*) below to var(--ink-*) */
-  --bg: var(--paper-bg);
-  --surface: var(--paper-fog);
-  --surface-light: var(--paper-fog-light);
-  --text-main: var(--paper-bone);
-  --text-muted: var(--paper-bone-muted);
-  --accent: var(--paper-signal);
-  --accent-hover: var(--paper-signal-hover);
-  --accent-text: var(--paper-signal-text);
-  --d-green: var(--paper-delta-green);
-  --d-red: var(--paper-delta-red);
+  /* --- ACTIVE PRESET MAPPING (Current: "ink" Dark Mode for high animation contrast) --- */
+  --bg: var(--ink-bg);
+  --surface: var(--ink-fog);
+  --surface-light: var(--ink-fog-light);
+  --text-main: var(--ink-bone);
+  --text-muted: var(--ink-bone-muted);
+  --accent: var(--ink-signal);
+  --accent-hover: var(--ink-signal-hover);
+  --accent-text: var(--ink-signal-text);
+  --d-green: var(--ink-delta-green);
+  --d-red: var(--ink-delta-red);
 }
 
 body {
@@ -90,11 +89,11 @@ body {
 @keyframes ambientGlowPulse {
   0%, 100% {
     transform: scale(0.95);
-    opacity: 0.05;
+    opacity: 0.15;
   }
   50% {
-    transform: scale(1.05);
-    opacity: 0.08;
+    transform: scale(1.08);
+    opacity: 0.3;
   }
 }
 
@@ -106,6 +105,6 @@ body {
   .animate-ambient-glow {
     animation: none !important;
     transform: scale(1) !important;
-    opacity: 0.06 !important;
+    opacity: 0.15 !important;
   }
 }
