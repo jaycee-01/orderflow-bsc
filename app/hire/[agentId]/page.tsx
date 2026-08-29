@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAccount, useSignTypedData, useReadContract } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { parseUnits, formatUnits, type Address, type Hex } from 'viem';
+import { parseUnits, formatUnits, type Address } from 'viem';
 import { AgentData, FLAGSHIP_AGENTS } from '@/lib/data/agents';
-import { ERC8183_CONTRACTS, ERC20_ABI, getNextJobId, getErc8183JobStatus, JobStatus } from '@/lib/jobs/erc8183';
+import { ERC8183_CONTRACTS, ERC20_ABI, getNextJobId, getErc8183JobStatus } from '@/lib/jobs/erc8183';
 import { buildHirePaymentTypedData, ALTANA_U_TOKEN_BSC_TESTNET } from '@/lib/payments/x402';
-import { Terminal, ArrowRight, Cpu, Loader2, Eye, AlertCircle, Wallet, ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Terminal, ArrowRight, Cpu, Loader2, Eye, AlertCircle, Wallet, ExternalLink, ShieldCheck, CheckCircle2, Calculator, Info } from 'lucide-react';
 
 export default function HireAgentPage({ params }: { params: { agentId: string } }) {
   const { address, isConnected } = useAccount();
@@ -17,9 +17,14 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
   const [agent, setAgent] = useState<AgentData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [jobState, setJobState] = useState<'IDLE' | 'SIGNING' | 'OPEN' | 'FUNDED' | 'SUBMITTED' | 'COMPLETED'>('IDLE');
+  // Flow Step State: 
+  // 'QUOTE_NEEDED' -> 'GETTING_QUOTE' -> 'QUOTE_READY' -> 'SIGNING' -> 'OPEN' -> 'FUNDED' -> 'SUBMITTED' -> 'COMPLETED'
+  const [flowStep, setFlowStep] = useState<'QUOTE_NEEDED' | 'GETTING_QUOTE' | 'QUOTE_READY' | 'SIGNING' | 'OPEN' | 'FUNDED' | 'SUBMITTED' | 'COMPLETED'>('QUOTE_NEEDED');
+
   const [taskDesc, setTaskDesc] = useState('');
   const [budget, setBudget] = useState('0.10');
+  const [quoteType, setQuoteType] = useState<'flat_rate' | 'dynamic' | null>(null);
+  const [quoteLabel, setQuoteLabel] = useState<string | null>(null);
   const [asset, setAsset] = useState('U');
   const [onchainJobId, setOnchainJobId] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -52,6 +57,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
           if (data.agent) {
             setAgent(data.agent);
             setTaskDesc(`Execute ${data.agent.name} strategy against BSC Testnet position`);
+            setBudget(data.agent.price || '0.10');
             return;
           }
         }
@@ -62,6 +68,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       const fallback = FLAGSHIP_AGENTS.find((a) => a.id === params.agentId || a.agentIdOnchain === params.agentId) || FLAGSHIP_AGENTS[0];
       setAgent(fallback);
       setTaskDesc(`Execute ${fallback.name} strategy against BSC Testnet position`);
+      setBudget(fallback.price || '0.10');
       setLoading(false);
     }
     loadAgent().finally(() => setLoading(false));
@@ -69,7 +76,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
 
   // Poll real on-chain job state once funded
   useEffect(() => {
-    if (!onchainJobId || jobState === 'IDLE' || jobState === 'SIGNING') return;
+    if (!onchainJobId || flowStep === 'QUOTE_NEEDED' || flowStep === 'GETTING_QUOTE' || flowStep === 'QUOTE_READY' || flowStep === 'SIGNING') return;
 
     let intervalId: NodeJS.Timeout;
     async function checkLiveStatus() {
@@ -78,11 +85,11 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       try {
         const res = await getErc8183JobStatus(onchainJobId);
         if (res.status === 'SUBMITTED') {
-          setJobState('SUBMITTED');
+          setFlowStep('SUBMITTED');
         } else if (res.status === 'COMPLETED') {
-          setJobState('COMPLETED');
+          setFlowStep('COMPLETED');
         } else if (res.status === 'FUNDED') {
-          setJobState('FUNDED');
+          setFlowStep('FUNDED');
         }
       } catch (err) {
         console.warn('On-chain poll notice:', err);
@@ -94,15 +101,47 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
     checkLiveStatus();
     intervalId = setInterval(checkLiveStatus, 6000);
     return () => clearInterval(intervalId);
-  }, [onchainJobId, jobState]);
+  }, [onchainJobId, flowStep]);
 
+  // 1. STEP 1: Describe Task & Get Quote
+  const handleGetQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskDesc.trim() || !agent) return;
+
+    setErrorMessage(null);
+    setFlowStep('GETTING_QUOTE');
+
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskDescription: taskDesc }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch quote');
+      }
+
+      setBudget(data.quotedPrice || agent.price || '0.10');
+      setQuoteType(data.quoteType);
+      setQuoteLabel(data.label);
+      setFlowStep('QUOTE_READY');
+    } catch (err: any) {
+      console.error('Quote fetch error:', err);
+      setErrorMessage(err?.message || 'Unable to generate quote');
+      setFlowStep('QUOTE_NEEDED');
+    }
+  };
+
+  // 2. STEP 2: Wallet Sign & Fund Job
   const handleCreateAndFundJob = async () => {
     if (!isConnected || !address || !agent) return;
     setErrorMessage(null);
-    setJobState('SIGNING');
+    setFlowStep('SIGNING');
 
     try {
-      // 1. Determine next on-chain Job ID
+      // Determine next on-chain Job ID
       let predictedJobId = BigInt(1);
       try {
         predictedJobId = await getNextJobId();
@@ -111,7 +150,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       }
       setOnchainJobId(predictedJobId.toString());
 
-      // 2. Real wallet popup signature: EIP-3009 TransferWithAuthorization
+      // Real wallet popup signature: EIP-3009 TransferWithAuthorization
       const providerRecipient = (agent.agentWallet && agent.agentWallet.startsWith('0x')
         ? (agent.agentWallet as Address)
         : ERC8183_CONTRACTS.commerce) as Address;
@@ -132,9 +171,9 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       });
 
       setSignatureHex(sig);
-      setJobState('OPEN');
+      setFlowStep('OPEN');
 
-      // 3. Post to backend hire coordinator
+      // Post to backend hire coordinator
       const hireRes = await fetch('/api/hire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,8 +194,8 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
         throw new Error(hireData.error || 'Failed to initialize ERC-8183 job');
       }
 
-      // 4. Job moves to FUNDED on-chain
-      setJobState('FUNDED');
+      // Job moves to FUNDED on-chain
+      setFlowStep('FUNDED');
       if (hireData.txHash) {
         setTxHash(hireData.txHash);
       }
@@ -164,7 +203,7 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
     } catch (err: any) {
       console.error('Hire execution error:', err);
       setErrorMessage(err?.message || 'Transaction / Signature request was rejected or failed.');
-      setJobState('IDLE');
+      setFlowStep('QUOTE_READY');
     }
   };
 
@@ -205,125 +244,177 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Form / State Tracker */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Wallet Gate / Connection Check */}
-          {!isConnected ? (
-            <div className="bg-fog p-8 rounded-lg border border-signal/40 space-y-5 text-center shadow-lg">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-signal/15 text-signal-text">
-                <Wallet className="h-6 w-6 text-signal-text" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-sans text-lg font-bold text-bone">Connect Wallet to Continue</h3>
-                <p className="text-xs font-mono text-bone-muted max-w-md mx-auto">
-                  Hiring an ERC-8004 agent requires an active Web3 wallet session to authorize the ERC-8183 job escrow and sign the EIP-3009 $U payment rail.
-                </p>
-              </div>
-              <div className="flex justify-center pt-2">
-                <ConnectButton />
-              </div>
+          
+          {/* STEP 1: DESCRIBE TASK & GET QUOTE */}
+          <div className={`bg-fog p-6 rounded-lg border transition-all ${
+            flowStep === 'QUOTE_NEEDED' || flowStep === 'GETTING_QUOTE'
+              ? 'border-signal/50 shadow-md'
+              : 'border-fog-light opacity-90'
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-bone font-sans flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-signal/15 text-signal-text font-mono text-xs font-bold">1</span>
+                <span>Describe Task & Request Quote</span>
+              </h2>
+              {flowStep !== 'QUOTE_NEEDED' && flowStep !== 'GETTING_QUOTE' && (
+                <button
+                  onClick={() => setFlowStep('QUOTE_NEEDED')}
+                  className="text-xs font-mono text-signal-text hover:underline"
+                >
+                  Edit Task
+                </button>
+              )}
             </div>
-          ) : (
-            <>
-              {/* Job Configuration */}
-              <div className="bg-fog p-6 rounded-lg border border-fog-light space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold text-bone font-sans">1. Define Job Parameters</h2>
-                  <div className="text-xs font-mono text-bone-muted flex items-center gap-1.5">
-                    <span>Balance:</span>
-                    <span className="font-bold text-bone">{uBalance.toFixed(2)} $U</span>
-                  </div>
-                </div>
 
-                {/* Faucet Alert if Balance is Low */}
-                {hasInsufficientBalance && (
-                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 font-mono text-xs text-amber-800 space-y-2">
-                    <div className="flex items-center gap-2 font-bold">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-                      <span>Insufficient $U Token Balance ({uBalance.toFixed(2)} / {budget} $U required)</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed">
-                      ERC-8183 escrow settlement requires testnet $U tokens. You can claim <strong>10 $U every 30 minutes</strong> at zero cost from the BSC Testnet Faucet contract.
-                    </p>
-                    <div className="pt-1 flex items-center gap-3">
-                      <a
-                        href="https://testnet.bscscan.com/address/0x86e9197CC0F76E4e4aaa7082180945196bBAb5D3#writeContract"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline bg-amber-500/20 px-2 py-1 rounded"
-                      >
-                        Claim 10 $U via Faucet Contract <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <button
-                        onClick={() => refetchBalance()}
-                        className="text-[11px] text-bone-muted underline hover:text-bone"
-                      >
-                        Refresh Balance
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3 font-mono text-xs">
-                  <div>
-                    <label className="text-bone-muted block mb-1">Task Instructions / Strategy Trigger</label>
-                    <textarea
-                      value={taskDesc}
-                      onChange={(e) => setTaskDesc(e.target.value)}
-                      disabled={jobState !== 'IDLE'}
-                      className="w-full bg-fog-light/40 border border-fog-light rounded p-3 text-bone focus:border-signal focus:outline-none resize-none h-20"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-bone-muted block mb-1">Budget Amount ($U)</label>
-                      <input
-                        type="text"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        disabled={jobState !== 'IDLE'}
-                        className="w-full bg-fog-light/40 border border-fog-light rounded p-2 text-bone focus:border-signal focus:outline-none font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-bone-muted block mb-1">Settlement Asset</label>
-                      <select
-                        value={asset}
-                        onChange={(e) => setAsset(e.target.value)}
-                        disabled={jobState !== 'IDLE'}
-                        className="w-full bg-fog-light/40 border border-fog-light rounded p-2 text-bone focus:border-signal focus:outline-none"
-                      >
-                        <option value="U">$U (Altana Studio Token)</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {errorMessage && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-red-700 text-xs font-mono">
-                    <strong>Error: </strong> {errorMessage}
-                  </div>
-                )}
-
-                {jobState === 'IDLE' && (
-                  <button
-                    onClick={handleCreateAndFundJob}
-                    className="w-full flex items-center justify-center gap-2 rounded bg-signal hover:bg-signal-hover py-3 font-mono text-xs font-bold text-slate-900 transition-colors shadow-lg shadow-signal/10 mt-4"
-                  >
-                    <span>Sign EIP-3009 Authorization & Hire Agent</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                )}
-
-                {jobState === 'SIGNING' && (
-                  <div className="w-full flex items-center justify-center gap-2 rounded bg-fog-light py-3 font-mono text-xs font-bold text-signal-text border border-signal/40">
-                    <Loader2 className="h-4 w-4 animate-spin text-signal" />
-                    <span>Waiting for Wallet Signature in Extension...</span>
-                  </div>
-                )}
+            <form onSubmit={handleGetQuote} className="space-y-4 font-mono text-xs">
+              <div>
+                <label className="text-bone-muted block mb-1 font-semibold">
+                  Task Specifications / Strategy Payload
+                </label>
+                <textarea
+                  value={taskDesc}
+                  onChange={(e) => setTaskDesc(e.target.value)}
+                  disabled={flowStep !== 'QUOTE_NEEDED'}
+                  required
+                  placeholder="Describe your strategy parameters or task instructions..."
+                  className="w-full bg-fog-light/40 border border-fog-light rounded p-3 text-bone focus:border-signal focus:outline-none resize-none h-24"
+                />
               </div>
+
+              {flowStep === 'QUOTE_NEEDED' && (
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-2 rounded bg-signal hover:bg-signal-hover py-3 font-mono text-xs font-bold text-slate-900 transition-colors shadow-sm"
+                >
+                  <Calculator className="h-4 w-4" />
+                  <span>Get Task Quote</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+
+              {flowStep === 'GETTING_QUOTE' && (
+                <div className="w-full flex items-center justify-center gap-2 rounded bg-fog-light py-3 font-mono text-xs font-bold text-signal-text border border-signal/40">
+                  <Loader2 className="h-4 w-4 animate-spin text-signal" />
+                  <span>Generating Quote for Task Payload...</span>
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* QUOTE RESULT & WALLET CONNECTION GATE */}
+          {(flowStep === 'QUOTE_READY' || flowStep === 'SIGNING' || flowStep === 'OPEN' || flowStep === 'FUNDED' || flowStep === 'SUBMITTED' || flowStep === 'COMPLETED') && (
+            <div className="space-y-6">
+              
+              {/* Returned Quote Display Box */}
+              <div className="p-5 rounded-lg bg-slate-950/80 border border-signal/40 space-y-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-fog-light/50 pb-2">
+                  <span className="text-bone-muted uppercase font-semibold text-[10px]">QUOTED TASK PRICE</span>
+                  <span className="text-xs font-bold text-delta-green bg-delta-green/10 border border-delta-green/30 px-2 py-0.5 rounded">
+                    VALIDATED
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-extrabold text-signal-text">{budget} $U</span>
+                  <span className="text-bone-muted text-[11px]">Asset: Altana $U Stablecoin</span>
+                </div>
+
+                {/* Honest Quote Labeling */}
+                <div className="p-2.5 rounded bg-fog-light/40 border border-fog-light text-bone-muted text-[11px] leading-relaxed flex items-start gap-2">
+                  <Info className="h-4 w-4 text-signal-text shrink-0 mt-0.5" />
+                  <div>
+                    {quoteLabel || (quoteType === 'flat_rate'
+                      ? "Estimated: flat rate (this agent doesn't yet provide task-specific quotes)"
+                      : "Quoted for your specified task parameters")}
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 2: WALLET CONNECTION GATE & SIGNATURE */}
+              {!isConnected ? (
+                <div className="bg-fog p-8 rounded-lg border border-signal/40 space-y-5 text-center shadow-lg">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-signal/15 text-signal-text">
+                    <Wallet className="h-6 w-6 text-signal-text" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-sans text-lg font-bold text-bone">2. Connect Wallet to Hire</h3>
+                    <p className="text-xs font-mono text-bone-muted max-w-md mx-auto">
+                      Connect your Web3 wallet session to authorize the ERC-8183 job escrow at the quoted price of <strong>{budget} $U</strong>.
+                    </p>
+                  </div>
+                  <div className="flex justify-center pt-2">
+                    <ConnectButton />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-fog p-6 rounded-lg border border-fog-light space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-bone font-sans flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-signal/15 text-signal-text font-mono text-xs font-bold">2</span>
+                      <span>Authorize Escrow & Hire</span>
+                    </h2>
+                    <div className="text-xs font-mono text-bone-muted flex items-center gap-1.5">
+                      <span>Your $U Balance:</span>
+                      <span className="font-bold text-bone">{uBalance.toFixed(2)} $U</span>
+                    </div>
+                  </div>
+
+                  {/* Faucet Alert if Balance is Low */}
+                  {hasInsufficientBalance && (
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 font-mono text-xs text-amber-800 space-y-2">
+                      <div className="flex items-center gap-2 font-bold">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                        <span>Insufficient $U Token Balance ({uBalance.toFixed(2)} / {budget} $U required)</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        ERC-8183 escrow settlement requires testnet $U tokens. You can claim <strong>10 $U every 30 minutes</strong> at zero cost from the BSC Testnet Faucet contract.
+                      </p>
+                      <div className="pt-1 flex items-center gap-3">
+                        <a
+                          href="https://testnet.bscscan.com/address/0x86e9197CC0F76E4e4aaa7082180945196bBAb5D3#writeContract"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline bg-amber-500/20 px-2 py-1 rounded"
+                        >
+                          Claim 10 $U via Faucet Contract <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <button
+                          onClick={() => refetchBalance()}
+                          className="text-[11px] text-bone-muted underline hover:text-bone"
+                        >
+                          Refresh Balance
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {errorMessage && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-red-700 text-xs font-mono">
+                      <strong>Error: </strong> {errorMessage}
+                    </div>
+                  )}
+
+                  {flowStep === 'QUOTE_READY' && (
+                    <button
+                      onClick={handleCreateAndFundJob}
+                      className="w-full flex items-center justify-center gap-2 rounded bg-signal hover:bg-signal-hover py-3 font-mono text-xs font-bold text-slate-900 transition-colors shadow-lg shadow-signal/10 mt-2"
+                    >
+                      <span>Sign EIP-3009 Authorization & Hire Agent ({budget} $U)</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
+
+                  {flowStep === 'SIGNING' && (
+                    <div className="w-full flex items-center justify-center gap-2 rounded bg-fog-light py-3 font-mono text-xs font-bold text-signal-text border border-signal/40">
+                      <Loader2 className="h-4 w-4 animate-spin text-signal" />
+                      <span>Waiting for Wallet Signature in Extension...</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Live ERC-8183 Lifecycle State Tracker */}
-              {jobState !== 'IDLE' && jobState !== 'SIGNING' && (
+              {(flowStep === 'OPEN' || flowStep === 'FUNDED' || flowStep === 'SUBMITTED' || flowStep === 'COMPLETED') && (
                 <div className="bg-fog p-6 rounded-lg border border-signal/40 space-y-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-base font-bold text-bone font-sans flex items-center gap-2">
@@ -359,13 +450,13 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
                       </div>
                     </div>
 
-                    {/* Step 3: Submitted (Honest status: waiting for seller agent) */}
+                    {/* Step 3: Submitted */}
                     <div className={`flex items-center gap-3 p-3 rounded border ${
-                      jobState === 'SUBMITTED' || jobState === 'COMPLETED'
+                      flowStep === 'SUBMITTED' || flowStep === 'COMPLETED'
                         ? 'bg-fog-light/50 border-fog-light'
                         : 'bg-fog-light/20 border-fog-light/40 opacity-75'
                     }`}>
-                      {jobState === 'SUBMITTED' || jobState === 'COMPLETED' ? (
+                      {flowStep === 'SUBMITTED' || flowStep === 'COMPLETED' ? (
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-delta-green/20 text-delta-green font-bold">
                           <CheckCircle2 className="h-4 w-4" />
                         </div>
@@ -382,13 +473,13 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
                       </div>
                     </div>
 
-                    {/* Step 4: Completed / Terminal */}
+                    {/* Step 4: Completed */}
                     <div className={`flex items-center gap-3 p-3 rounded border ${
-                      jobState === 'COMPLETED'
+                      flowStep === 'COMPLETED'
                         ? 'bg-signal/10 border-signal/40'
                         : 'bg-fog-light/20 border-fog-light/40 opacity-50'
                     }`}>
-                      {jobState === 'COMPLETED' ? (
+                      {flowStep === 'COMPLETED' ? (
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-signal text-slate-900 font-bold">
                           <CheckCircle2 className="h-4 w-4" />
                         </div>
@@ -434,11 +525,13 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
                   </div>
                 </div>
               )}
-            </>
+
+            </div>
           )}
+
         </div>
 
-        {/* Right Summary */}
+        {/* Right Protocol Summary Sidebar */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-fog p-6 rounded-lg border border-fog-light space-y-4">
             <h3 className="font-sans font-bold text-bone">Three-Standard Protocol Details</h3>
@@ -465,4 +558,3 @@ export default function HireAgentPage({ params }: { params: { agentId: string } 
     </div>
   );
 }
-
