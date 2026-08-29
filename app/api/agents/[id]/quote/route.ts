@@ -22,7 +22,10 @@ export async function POST(
       (a) => a.id === agentId || a.agentIdOnchain === agentId
     );
 
-    const listedPrice = agent ? agent.price : '0.10';
+    // Extract price from first service or default flat rate of 0.10 $U
+    const listedPrice = agent && agent.services && agent.services.length > 0
+      ? (agent.services[0].pricePerCall ? agent.services[0].pricePerCall.split(' ')[0] : '0.10')
+      : '0.10';
 
     // Check if agent is one of our own flagship builds
     const isOwnBuild = agent ? agent.isOwnBuild : false;
