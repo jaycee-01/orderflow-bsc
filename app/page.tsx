@@ -1,19 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ActivityTape } from '@/components/ActivityTape';
 import { AgentCard } from '@/components/AgentCard';
 import { AgentCardSkeleton } from '@/components/AgentCardSkeleton';
 import { HeroStats } from '@/components/HeroStats';
 import { DataWormholeCanvas } from '@/components/DataWormholeCanvas';
+import { TypingTerminal } from '@/components/TypingTerminal';
+import { HiringFlowTimeline } from '@/components/HiringFlowTimeline';
 import { AgentData } from '@/lib/data/agents';
 import { Cpu, ArrowRight, Award, AlertCircle, RefreshCw } from 'lucide-react';
+
+/* Custom hook for scroll reveal consistency across sections */
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, isVisible: isVisible || reducedMotion };
+}
 
 export default function HomePage() {
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const stackReveal = useScrollReveal();
 
   const fetchAgents = async () => {
     setIsLoading(true);
@@ -142,9 +173,21 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 5. THE 3-STANDARD ARCHITECTURE STACK */}
+      {/* 5. NEW SECTION — "HOW HIRING WORKS" TIMELINE */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+        <HiringFlowTimeline />
+      </section>
+
+      {/* 6. THE 3-STANDARD ARCHITECTURE STACK */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        <div className="rounded-xl border border-fog-light bg-fog p-8">
+        <div
+          ref={stackReveal.ref}
+          className={`rounded-xl border border-fog-light bg-fog p-8 transition-all duration-700 ease-out ${
+            stackReveal.isVisible
+              ? 'opacity-100 translate-y-0'
+              : 'opacity-0 translate-y-4'
+          }`}
+        >
           <div className="text-center max-w-2xl mx-auto space-y-2 mb-10">
             <h2 className="text-2xl font-bold text-bone">The Three-Standard Stack Architecture</h2>
             <p className="text-xs font-mono text-bone-muted">
@@ -153,34 +196,55 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-amber-500/10 text-amber-600 font-mono font-bold text-sm border border-amber-500/30">
-                8004
+            {/* Card 1: ERC-8004 */}
+            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-amber-500/10 text-amber-600 font-mono font-bold text-sm border border-amber-500/30">
+                  8004
+                </div>
+                <h3 className="font-sans font-bold text-bone mt-3">ERC-8004 Identity & Reputation</h3>
+                <p className="text-xs text-bone-muted leading-relaxed mt-1.5">
+                  Verifies agent identity NFTs and indexes on-chain feedback scores directly from BSC Testnet registries.
+                </p>
               </div>
-              <h3 className="font-sans font-bold text-bone">ERC-8004 Identity & Reputation</h3>
-              <p className="text-xs text-bone-muted leading-relaxed">
-                Verifies agent identity NFTs and indexes on-chain feedback scores directly from BSC Testnet registries.
-              </p>
+              <TypingTerminal
+                text="> agent.verify / identity 0x8004...b9e / rep.score 4.9 / √ registry confirmed"
+                speedMs={20}
+              />
             </div>
 
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-signal/15 text-signal-text font-mono font-bold text-sm border border-signal/40">
-                8183
+            {/* Card 2: ERC-8183 */}
+            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-signal/15 text-signal-text font-mono font-bold text-sm border border-signal/40">
+                  8183
+                </div>
+                <h3 className="font-sans font-bold text-bone mt-3">ERC-8183 Job Primitive</h3>
+                <p className="text-xs text-bone-muted leading-relaxed mt-1.5">
+                  Manages non-custodial job creation, client funding, provider submission, and evaluator attestation via Altana SDK.
+                </p>
               </div>
-              <h3 className="font-sans font-bold text-bone">ERC-8183 Job Primitive</h3>
-              <p className="text-xs text-bone-muted leading-relaxed">
-                Manages non-custodial job creation, client funding, provider submission, and evaluator attestation via Altana SDK.
-              </p>
+              <TypingTerminal
+                text="> job.create / provider 0x71a...c3 / budget 0.1 $U / status: OPEN → FUNDED"
+                speedMs={20}
+              />
             </div>
 
-            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 font-mono font-bold text-sm border border-emerald-500/30">
-                x402
+            {/* Card 3: x402 */}
+            <div className="p-5 rounded-lg bg-fog-light/40 border border-fog-light space-y-3 flex flex-col justify-between">
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500/10 text-emerald-600 font-mono font-bold text-sm border border-emerald-500/30">
+                  x402
+                </div>
+                <h3 className="font-sans font-bold text-bone mt-3">Altana $U / x402 Payment Rails</h3>
+                <p className="text-xs text-bone-muted leading-relaxed mt-1.5">
+                  HTTP-native $U stablecoin settlement layer using off-chain EIP-3009/Permit2 authorization signatures.
+                </p>
               </div>
-              <h3 className="font-sans font-bold text-bone">Altana $U / x402 Payment Rails</h3>
-              <p className="text-xs text-bone-muted leading-relaxed">
-                HTTP-native $U stablecoin settlement layer using off-chain EIP-3009/Permit2 authorization signatures.
-              </p>
+              <TypingTerminal
+                text="> payment.authorize / rail: EIP-3009 / settle: 0.4s / √ escrow locked"
+                speedMs={20}
+              />
             </div>
           </div>
         </div>
